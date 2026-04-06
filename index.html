@@ -1,34 +1,1301 @@
-exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method not allowed' };
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fix Lambeth — Report a problem</title>
+<meta name="description" content="A simpler way to report issues to Lambeth Council. Available in 5 languages.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --bg: #f5f0ff;
+    --surface: #ffffff;
+    --ink: #0f0e17;
+    --ink-mid: #3d3a4a;
+    --ink-soft: #7a7589;
+    --accent: #5b2be8;
+    --accent-dark: #4a22cc;
+    --accent-2: #e84855;
+    --accent-3: #f7c59f;
+    --green: #2ec4b6;
+    --border: #e2ddf5;
+    --radius: 14px;
   }
 
-  const AIRTABLE_TOKEN = process.env.AIRTABLE_TOKEN;
-  const AIRTABLE_BASE = process.env.AIRTABLE_BASE;
-  const AIRTABLE_TABLE = process.env.AIRTABLE_TABLE;
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
 
-  try {
-    const fields = JSON.parse(event.body);
-    const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE}/${AIRTABLE_TABLE}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ fields })
-    });
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
 
-    const data = await res.json();
-    if (!res.ok) {
-      return { statusCode: res.status, body: JSON.stringify(data) };
+  /* HEADER */
+  .header {
+    background: var(--accent);
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+  }
+
+  .logo {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.03em;
+  }
+
+  .logo span { color: var(--accent-3); }
+
+  .lang-switcher {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .lang-btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 0.3rem 0.7rem;
+    border-radius: 100px;
+    border: 1.5px solid rgba(255,255,255,0.4);
+    background: transparent;
+    color: rgba(255,255,255,0.8);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .lang-btn:hover, .lang-btn.active {
+    background: #fff;
+    color: var(--accent);
+    border-color: #fff;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    background: var(--accent-dark);
+    border-bottom: 2px solid rgba(255,255,255,0.1);
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 0.9rem 1rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.6);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.02em;
+  }
+
+  .tab-btn.active {
+    color: #fff;
+    background: rgba(255,255,255,0.1);
+    border-bottom: 2px solid var(--accent-3);
+  }
+
+  /* HERO */
+  .hero {
+    background: var(--accent);
+    padding: 2.5rem 2rem 3.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 0; right: 0;
+    height: 40px;
+    background: var(--bg);
+    clip-path: ellipse(55% 100% at 50% 100%);
+  }
+
+  .hero-eyebrow {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-3);
+    margin-bottom: 0.8rem;
+  }
+
+  .hero h1 {
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+    margin-bottom: 0.8rem;
+  }
+
+  .hero p {
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.8);
+    max-width: 480px;
+    margin: 0 auto;
+    line-height: 1.65;
+  }
+
+  /* MAIN */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .app-wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+    width: 100%;
+  }
+
+  /* PROGRESS */
+  .progress-bar {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 2rem;
+  }
+
+  .prog-seg {
+    flex: 1;
+    height: 4px;
+    border-radius: 100px;
+    background: var(--border);
+    transition: background 0.3s;
+  }
+
+  .prog-seg.done { background: var(--accent); }
+  .prog-seg.active { background: var(--accent-2); }
+
+  /* STEPS */
+  .step { display: none; }
+  .step.active { display: block; }
+
+  .step-heading {
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+    margin-bottom: 0.3rem;
+  }
+
+  .step-sub {
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    margin-bottom: 1.8rem;
+  }
+
+  /* ISSUE GRID */
+  .issue-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+  }
+
+  .issue-card {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.2rem 1rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-family: inherit;
+  }
+
+  .issue-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+
+  .issue-emoji { font-size: 1.5rem; line-height: 1; }
+
+  .issue-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+
+  /* FORM */
+  .selected-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #f0ebff;
+    border: 1.5px solid var(--accent);
+    border-radius: 100px;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 1.2rem;
+  }
+
+  .field { margin-bottom: 1.2rem; }
+
+  .field label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-mid);
+    margin-bottom: 0.4rem;
+  }
+
+  .field input, .field textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.92rem;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s;
+    resize: vertical;
+  }
+
+  .field input:focus, .field textarea:focus {
+    border-color: var(--accent);
+  }
+
+  /* PHOTO UPLOAD */
+  .photo-upload {
+    width: 100%;
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    background: var(--surface);
+  }
+
+  .photo-upload:hover { border-color: var(--accent); background: #f8f5ff; }
+
+  .photo-upload input { display: none; }
+
+  .photo-upload-label {
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .photo-upload-label .icon { font-size: 1.5rem; }
+  .photo-preview { width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin-top: 0.8rem; display: none; }
+
+  /* BUTTONS */
+  .btn-primary {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 1rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .btn-primary:hover { background: var(--accent-dark); transform: translateY(-1px); }
+  .btn-primary:disabled { background: var(--ink-soft); cursor: not-allowed; transform: none; }
+
+  .btn-back {
+    width: 100%;
+    background: none;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 0.75rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--ink-mid);
+    cursor: pointer;
+    transition: border-color 0.15s;
+    margin-top: 0.75rem;
+  }
+
+  .btn-back:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* CONFIRMATION */
+  .confirm-card {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.8rem;
+    margin-bottom: 1.2rem;
+    text-align: center;
+  }
+
+  .confirm-icon { font-size: 3rem; margin-bottom: 1rem; }
+
+  .confirm-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--ink);
+    margin-bottom: 0.5rem;
+  }
+
+  .confirm-sub {
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    line-height: 1.6;
+    margin-bottom: 1.2rem;
+  }
+
+  .confirm-email {
+    background: #f0ebff;
+    border: 1.5px solid var(--accent);
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    font-size: 0.82rem;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 1rem;
+    word-break: break-all;
+  }
+
+  .btn-email {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--ink);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.92rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s;
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+
+  .btn-email:hover { background: var(--accent-2); }
+
+  .status-note {
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+    text-align: center;
+    line-height: 1.6;
+    margin-top: 0.5rem;
+  }
+
+  /* MAP TAB */
+  .map-wrap {
+    max-width: 100%;
+    padding: 1.5rem;
+  }
+
+  .map-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .map-title {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--ink);
+  }
+
+  .report-count {
+    background: var(--accent);
+    color: #fff;
+    border-radius: 100px;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  #map {
+    width: 100%;
+    height: 460px;
+    border-radius: var(--radius);
+    border: 2px solid var(--border);
+    z-index: 1;
+  }
+
+  .map-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 1rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--ink-mid);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .map-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+  }
+
+  /* SPINNER */
+  .spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* FOOTER */
+  .footer {
+    background: var(--ink);
+    padding: 1.2rem 2rem;
+    text-align: center;
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.4);
+    margin-top: auto;
+  }
+
+  .footer a { color: rgba(255,255,255,0.6); text-decoration: none; }
+
+  /* RTL */
+  [dir="rtl"] .issue-grid { direction: rtl; }
+  [dir="rtl"] .btn-email { flex-direction: row-reverse; }
+
+  @media (max-width: 480px) {
+    .issue-grid { grid-template-columns: 1fr; }
+    .header { flex-direction: column; }
+    #map { height: 320px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Fix <span>Lambeth</span></div>
+  <div class="lang-switcher">
+    <button class="lang-btn active" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" onclick="setLang('pt')">PT</button>
+    <button class="lang-btn" onclick="setLang('es')">ES</button>
+    <button class="lang-btn" onclick="setLang('ar')">AR</button>
+    <button class="lang-btn" onclick="setLang('pl')">PL</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('report')" id="tab-report" data-t-tab="tabReport">Report a problem</button>
+  <button class="tab-btn" onclick="showTab('map')" id="tab-map" data-t-tab="tabMap">See reports map</button>
+</div>
+
+<!-- REPORT TAB -->
+<div class="tab-content active" id="content-report">
+
+  <div class="hero">
+    <div class="hero-eyebrow" id="hero-eyebrow">For Lambeth residents</div>
+    <h1 id="hero-title">Fix Lambeth.<br>Report it fast.</h1>
+    <p id="hero-sub">Pick your issue, add the details — we'll send it to the right team at Lambeth Council.</p>
+  </div>
+
+  <div class="app-wrap">
+    <div class="progress-bar">
+      <div class="prog-seg active" id="ps1"></div>
+      <div class="prog-seg" id="ps2"></div>
+      <div class="prog-seg" id="ps3"></div>
+    </div>
+
+    <!-- STEP 1: ISSUE -->
+    <div class="step active" id="s1">
+      <div class="step-heading" id="s1-heading">What's the problem?</div>
+      <div class="step-sub" id="s1-sub">Tap the issue you want to report.</div>
+      <div class="issue-grid">
+        <button class="issue-card" data-key="flytipping" data-email="environment@lambeth.gov.uk">
+          <span class="issue-emoji">🗑️</span>
+          <span class="issue-label" data-t="flytipping">Fly-tipping</span>
+        </button>
+        <button class="issue-card" data-key="pothole" data-email="t%26hcallcentre@lambeth.gov.uk">
+          <span class="issue-emoji">🕳️</span>
+          <span class="issue-label" data-t="pothole">Pothole / Pavement</span>
+        </button>
+        <button class="issue-card" data-key="streetlight" data-email="t%26hcallcentre@lambeth.gov.uk">
+          <span class="issue-emoji">💡</span>
+          <span class="issue-label" data-t="streetlight">Broken streetlight</span>
+        </button>
+        <button class="issue-card" data-key="graffiti" data-email="environment@lambeth.gov.uk">
+          <span class="issue-emoji">🎨</span>
+          <span class="issue-label" data-t="graffiti">Graffiti</span>
+        </button>
+        <button class="issue-card" data-key="noise" data-email="noise@lambeth.gov.uk">
+          <span class="issue-emoji">🔊</span>
+          <span class="issue-label" data-t="noise">Noise nuisance</span>
+        </button>
+        <button class="issue-card" data-key="drain" data-email="t%26hcallcentre@lambeth.gov.uk">
+          <span class="issue-emoji">🌊</span>
+          <span class="issue-label" data-t="drain">Blocked drain</span>
+        </button>
+        <button class="issue-card" data-key="tree" data-email="parks@lambeth.gov.uk">
+          <span class="issue-emoji">🌳</span>
+          <span class="issue-label" data-t="tree">Tree / Overgrowth</span>
+        </button>
+        <button class="issue-card" data-key="asb" data-email="PPARS@lambeth.gov.uk">
+          <span class="issue-emoji">⚠️</span>
+          <span class="issue-label" data-t="asb">Anti-social behaviour</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 2: DETAILS -->
+    <div class="step" id="s2">
+      <div class="selected-chip" id="selected-chip"></div>
+      <div class="step-heading" id="s2-heading">Where and what?</div>
+      <div class="step-sub" id="s2-sub">Give us the details so the council can act.</div>
+
+      <div class="field">
+        <label id="label-location">Street address</label>
+        <input type="text" id="inp-location" placeholder="e.g. 42 Brixton Road, SW9" />
+      </div>
+
+      <div class="field">
+        <label id="label-postcode">Postcode</label>
+        <input type="text" id="inp-postcode" placeholder="e.g. SW9 8DN" />
+      </div>
+
+      <div class="field">
+        <label id="label-desc">Describe the issue</label>
+        <textarea id="inp-desc" rows="4" placeholder="Size, exact spot, how long it's been there, any safety risk..."></textarea>
+      </div>
+
+      <div class="field">
+        <label id="label-when">When did you notice it?</label>
+        <input type="text" id="inp-when" placeholder="e.g. This morning, last week..." />
+      </div>
+
+      <div class="field">
+        <label id="label-name">Your name</label>
+        <input type="text" id="inp-name" placeholder="e.g. Sarah Jones" />
+      </div>
+
+      <div class="field">
+        <label id="label-photo">Add a photo (optional)</label>
+        <div class="photo-upload" onclick="document.getElementById('photo-input').click()">
+          <label class="photo-upload-label">
+            <span class="icon">📷</span>
+            <span id="photo-label-text">Tap to add a photo</span>
+          </label>
+          <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="handlePhoto(this)">
+          <img id="photo-preview" class="photo-preview" alt="Preview" />
+        </div>
+      </div>
+
+      <button class="btn-primary" id="btn-next" onclick="toStep3()">
+        <span id="btn-next-text">Prepare my report</span> →
+      </button>
+      <button class="btn-back" onclick="toStep1()" id="btn-back-1">← Back</button>
+    </div>
+
+    <!-- STEP 3: CONFIRM -->
+    <div class="step" id="s3">
+      <div class="confirm-card">
+        <div class="confirm-icon">✅</div>
+        <div class="confirm-title" id="confirm-title">Your report is ready</div>
+        <div class="confirm-sub" id="confirm-sub">Tap the button below to open your email app. The report is already written — just hit send.</div>
+        <div class="confirm-email" id="confirm-email"></div>
+
+        <button class="btn-email" id="email-btn" onclick="sendEmail()">
+          <span id="btn-email-text">Open email app to send →</span>
+          <span>✉️</span>
+        </button>
+
+        <div id="fallback-box" style="display:none; margin-top:1rem; background:#f8f5ff; border:1.5px solid #e2ddf5; border-radius:10px; padding:1rem;">
+          <p style="font-size:0.75rem; font-weight:700; color:#5b2be8; margin-bottom:0.5rem; text-transform:uppercase; letter-spacing:0.05em;">If the button didn't work — send this email manually:</p>
+          <p style="font-size:0.82rem; margin-bottom:0.3rem;"><strong>To:</strong> <span id="fallback-to"></span></p>
+          <p style="font-size:0.82rem; margin-bottom:0.3rem;"><strong>Subject:</strong> <span id="fallback-subject"></span></p>
+          <div style="background:#fff; border:1px solid #e2ddf5; border-radius:8px; padding:0.8rem; margin-top:0.5rem; font-size:0.82rem; white-space:pre-wrap; line-height:1.6;" id="fallback-body"></div>
+          <button onclick="copyEmailBody()" style="margin-top:0.6rem; background:none; border:1.5px solid #5b2be8; border-radius:8px; padding:0.4rem 0.8rem; font-size:0.75rem; font-weight:700; color:#5b2be8; cursor:pointer;">Copy email text</button>
+          <span id="copy-ok" style="font-size:0.75rem; color:#2ec4b6; margin-left:0.5rem; display:none;">✓ Copied!</span>
+        </div>
+
+        <p class="status-note" id="status-note">Your report has been saved to our map.</p>
+      </div>
+      <button class="btn-back" onclick="toStep1()" id="btn-restart">← Report another issue</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- MAP TAB -->
+<div class="tab-content" id="content-map">
+  <div class="map-wrap">
+    <div class="map-header">
+      <div class="map-title" id="map-title">Reports in Lambeth</div>
+      <div class="report-count" id="report-count">Loading...</div>
+    </div>
+    <div id="map"></div>
+    <div class="map-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#e84855"></div> Fly-tipping / Graffiti</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#5b2be8"></div> Roads / Drains</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f7c59f; border: 1px solid #ccc"></div> Streetlight</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2ec4b6"></div> Trees / Parks</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff9f1c"></div> Noise / ASB</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  Built by <a href="https://bensharoni.com">Ben Sharoni</a> · Not affiliated with Lambeth Council · <span id="footer-date"></span>
+</div>
+
+<script>
+// ── CONFIG — keys live in Netlify environment variables, not here ──
+
+// ── TRANSLATIONS ──
+const T = {
+  en: {
+    dir: 'ltr',
+    heroEyebrow: 'For Lambeth residents',
+    heroTitle: 'Fix Lambeth.<br>Report it fast.',
+    heroSub: "Pick your issue, add the details — we'll send it to the right team at Lambeth Council.",
+    tabReport: 'Report a problem',
+    tabMap: 'See reports map',
+    s1Heading: "What's the problem?",
+    s1Sub: 'Tap the issue you want to report.',
+    s2Heading: 'Where and what?',
+    s2Sub: 'Give us the details so the council can act.',
+    labelLocation: 'Street address',
+    labelPostcode: 'Postcode',
+    labelDesc: 'Describe the issue',
+    labelWhen: 'When did you notice it?',
+    labelName: 'Your name',
+    labelPhoto: 'Add a photo (optional)',
+    photoLabelText: 'Tap to add a photo',
+    btnNext: 'Prepare my report',
+    btnBack: '← Back',
+    btnRestart: '← Report another issue',
+    confirmTitle: 'Your report is ready',
+    confirmSub: 'Tap below to open your email app. The report is already written — just hit send.',
+    btnEmail: 'Open email to send report',
+    statusNote: 'Your report has been saved to our map. Once resolved, you can mark it as fixed.',
+    mapTitle: 'Reports in Lambeth',
+    alertFill: 'Please fill in the address and description.',
+    sending: 'Saving report...',
+    issues: {
+      flytipping: 'Fly-tipping & dumped rubbish',
+      pothole: 'Pothole / Pavement damage',
+      streetlight: 'Broken or faulty streetlight',
+      graffiti: 'Graffiti',
+      noise: 'Noise nuisance',
+      drain: 'Blocked drain or manhole',
+      tree: 'Dangerous or overhanging tree',
+      asb: 'Anti-social behaviour',
+    },
+    issueLabels: {
+      flytipping: 'Fly-tipping',
+      pothole: 'Pothole / Pavement',
+      streetlight: 'Broken streetlight',
+      graffiti: 'Graffiti',
+      noise: 'Noise nuisance',
+      drain: 'Blocked drain',
+      tree: 'Tree / Overgrowth',
+      asb: 'Anti-social behaviour',
     }
-
-    return {
-      statusCode: 200,
-      headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify(data)
-    };
-  } catch (err) {
-    return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+  },
+  pt: {
+    dir: 'ltr',
+    heroEyebrow: 'Para residentes de Lambeth',
+    heroTitle: 'Fix Lambeth.<br>Reporte rápido.',
+    heroSub: 'Escolha o problema, adicione os detalhes — enviamos à equipa certa da Câmara de Lambeth.',
+    tabReport: 'Reportar problema',
+    tabMap: 'Ver mapa de reportes',
+    s1Heading: 'Qual é o problema?',
+    s1Sub: 'Toque no tipo de problema que quer reportar.',
+    s2Heading: 'Onde e o quê?',
+    s2Sub: 'Dê-nos os detalhes para que a câmara possa agir.',
+    labelLocation: 'Morada',
+    labelPostcode: 'Código postal',
+    labelDesc: 'Descreva o problema',
+    labelWhen: 'Quando notou o problema?',
+    labelName: 'O seu nome',
+    labelPhoto: 'Adicionar foto (opcional)',
+    photoLabelText: 'Toque para adicionar uma foto',
+    btnNext: 'Preparar o meu relatório',
+    btnBack: '← Voltar',
+    btnRestart: '← Reportar outro problema',
+    confirmTitle: 'O seu relatório está pronto',
+    confirmSub: 'Toque abaixo para abrir o seu email. O relatório já está escrito — basta enviar.',
+    btnEmail: 'Abrir email para enviar relatório',
+    statusNote: 'O seu relatório foi guardado no nosso mapa.',
+    mapTitle: 'Reportes em Lambeth',
+    alertFill: 'Por favor preencha a morada e a descrição.',
+    sending: 'A guardar relatório...',
+    issues: {
+      flytipping: 'Deposição ilegal de lixo',
+      pothole: 'Buraco / Dano no passeio',
+      streetlight: 'Iluminação pública avariada',
+      graffiti: 'Graffiti',
+      noise: 'Ruído incómodo',
+      drain: 'Esgoto entupido',
+      tree: 'Árvore perigosa',
+      asb: 'Comportamento antissocial',
+    },
+    issueLabels: {
+      flytipping: 'Lixo ilegal',
+      pothole: 'Buraco',
+      streetlight: 'Iluminação',
+      graffiti: 'Graffiti',
+      noise: 'Ruído',
+      drain: 'Esgoto',
+      tree: 'Árvore',
+      asb: 'Comportamento antissocial',
+    }
+  },
+  es: {
+    dir: 'ltr',
+    heroEyebrow: 'Para residentes de Lambeth',
+    heroTitle: 'Fix Lambeth.<br>Repórtalo rápido.',
+    heroSub: 'Elige el problema, añade los detalles — lo enviamos al equipo correcto del ayuntamiento.',
+    tabReport: 'Reportar problema',
+    tabMap: 'Ver mapa de reportes',
+    s1Heading: '¿Cuál es el problema?',
+    s1Sub: 'Toca el tipo de problema que quieres reportar.',
+    s2Heading: '¿Dónde y qué?',
+    s2Sub: 'Danos los detalles para que el ayuntamiento pueda actuar.',
+    labelLocation: 'Dirección',
+    labelPostcode: 'Código postal',
+    labelDesc: 'Describe el problema',
+    labelWhen: '¿Cuándo lo notaste?',
+    labelName: 'Tu nombre',
+    labelPhoto: 'Añadir foto (opcional)',
+    photoLabelText: 'Toca para añadir una foto',
+    btnNext: 'Preparar mi informe',
+    btnBack: '← Atrás',
+    btnRestart: '← Reportar otro problema',
+    confirmTitle: 'Tu informe está listo',
+    confirmSub: 'Toca abajo para abrir tu app de email. El informe ya está escrito — solo dale a enviar.',
+    btnEmail: 'Abrir email para enviar informe',
+    statusNote: 'Tu informe ha sido guardado en nuestro mapa.',
+    mapTitle: 'Reportes en Lambeth',
+    alertFill: 'Por favor rellena la dirección y la descripción.',
+    sending: 'Guardando informe...',
+    issues: {
+      flytipping: 'Vertido ilegal de basura',
+      pothole: 'Bache / Daño en acera',
+      streetlight: 'Farola averiada',
+      graffiti: 'Grafiti',
+      noise: 'Ruido molesto',
+      drain: 'Desagüe bloqueado',
+      tree: 'Árbol peligroso',
+      asb: 'Comportamiento antisocial',
+    },
+    issueLabels: {
+      flytipping: 'Vertido ilegal',
+      pothole: 'Bache',
+      streetlight: 'Farola',
+      graffiti: 'Grafiti',
+      noise: 'Ruido',
+      drain: 'Desagüe',
+      tree: 'Árbol',
+      asb: 'Comportamiento antisocial',
+    }
+  },
+  ar: {
+    dir: 'rtl',
+    heroEyebrow: 'لسكان لامبيث',
+    heroTitle: 'Fix Lambeth.<br>أبلغ بسرعة.',
+    heroSub: 'اختر المشكلة، أضف التفاصيل — سنرسلها إلى الفريق المناسب في مجلس لامبيث.',
+    tabReport: 'الإبلاغ عن مشكلة',
+    tabMap: 'خريطة البلاغات',
+    s1Heading: 'ما هي المشكلة؟',
+    s1Sub: 'اضغط على نوع المشكلة التي تريد الإبلاغ عنها.',
+    s2Heading: 'أين وماذا؟',
+    s2Sub: 'أعطنا التفاصيل حتى يتمكن المجلس من التصرف.',
+    labelLocation: 'العنوان',
+    labelPostcode: 'الرمز البريدي',
+    labelDesc: 'صف المشكلة',
+    labelWhen: 'متى لاحظت المشكلة؟',
+    labelName: 'اسمك',
+    labelPhoto: 'أضف صورة (اختياري)',
+    photoLabelText: 'اضغط لإضافة صورة',
+    btnNext: 'تحضير بلاغي',
+    btnBack: '← رجوع',
+    btnRestart: '← الإبلاغ عن مشكلة أخرى',
+    confirmTitle: 'بلاغك جاهز',
+    confirmSub: 'اضغط أدناه لفتح تطبيق البريد. البلاغ مكتوب بالفعل — فقط أرسله.',
+    btnEmail: 'فتح البريد لإرسال البلاغ',
+    statusNote: 'تم حفظ بلاغك في خريطتنا.',
+    mapTitle: 'البلاغات في لامبيث',
+    alertFill: 'يرجى ملء العنوان والوصف.',
+    sending: 'جاري حفظ البلاغ...',
+    issues: {
+      flytipping: 'إلقاء القمامة بشكل غير قانوني',
+      pothole: 'حفرة في الطريق',
+      streetlight: 'عمود إنارة معطوب',
+      graffiti: 'كتابة على الجدران',
+      noise: 'ضوضاء مزعجة',
+      drain: 'مجرور مسدود',
+      tree: 'شجرة خطرة',
+      asb: 'سلوك مناهض للمجتمع',
+    },
+    issueLabels: {
+      flytipping: 'إلقاء القمامة',
+      pothole: 'حفرة',
+      streetlight: 'إنارة',
+      graffiti: 'كتابة على الجدران',
+      noise: 'ضوضاء',
+      drain: 'مجرور',
+      tree: 'شجرة',
+      asb: 'سلوك مناهض',
+    }
+  },
+  pl: {
+    dir: 'ltr',
+    heroEyebrow: 'Dla mieszkańców Lambeth',
+    heroTitle: 'Fix Lambeth.<br>Zgłoś szybko.',
+    heroSub: 'Wybierz problem, dodaj szczegóły — wyślemy to do właściwego zespołu w radzie.',
+    tabReport: 'Zgłoś problem',
+    tabMap: 'Mapa zgłoszeń',
+    s1Heading: 'Jaki jest problem?',
+    s1Sub: 'Kliknij rodzaj problemu, który chcesz zgłosić.',
+    s2Heading: 'Gdzie i co?',
+    s2Sub: 'Podaj szczegóły, aby rada mogła działać.',
+    labelLocation: 'Adres',
+    labelPostcode: 'Kod pocztowy',
+    labelDesc: 'Opisz problem',
+    labelWhen: 'Kiedy zauważyłeś problem?',
+    labelName: 'Twoje imię i nazwisko',
+    labelPhoto: 'Dodaj zdjęcie (opcjonalnie)',
+    photoLabelText: 'Dotknij, aby dodać zdjęcie',
+    btnNext: 'Przygotuj moje zgłoszenie',
+    btnBack: '← Wstecz',
+    btnRestart: '← Zgłoś inny problem',
+    confirmTitle: 'Twoje zgłoszenie jest gotowe',
+    confirmSub: 'Dotknij poniżej, aby otworzyć aplikację email. Zgłoszenie jest już napisane — wystarczy je wysłać.',
+    btnEmail: 'Otwórz email, aby wysłać zgłoszenie',
+    statusNote: 'Twoje zgłoszenie zostało zapisane na naszej mapie.',
+    mapTitle: 'Zgłoszenia w Lambeth',
+    alertFill: 'Proszę wypełnić adres i opis.',
+    sending: 'Zapisywanie zgłoszenia...',
+    issues: {
+      flytipping: 'Nielegalne wyrzucanie śmieci',
+      pothole: 'Dziura w drodze',
+      streetlight: 'Zepsuta latarnia',
+      graffiti: 'Graffiti',
+      noise: 'Hałas',
+      drain: 'Zatkany odpływ',
+      tree: 'Niebezpieczne drzewo',
+      asb: 'Zachowanie aspołeczne',
+    },
+    issueLabels: {
+      flytipping: 'Śmieci',
+      pothole: 'Dziura',
+      streetlight: 'Latarnia',
+      graffiti: 'Graffiti',
+      noise: 'Hałas',
+      drain: 'Odpływ',
+      tree: 'Drzewo',
+      asb: 'Zachowanie aspołeczne',
+    }
   }
 };
+
+// Issue colours for map
+const ISSUE_COLOURS = {
+  flytipping: '#e84855',
+  graffiti: '#e84855',
+  pothole: '#5b2be8',
+  drain: '#5b2be8',
+  streetlight: '#f7c59f',
+  tree: '#2ec4b6',
+  noise: '#ff9f1c',
+  asb: '#ff9f1c',
+};
+
+let lang = 'en';
+let selectedKey = '';
+let selectedEmail = '';
+let photoFile = null;
+let map = null;
+let currentMailto = '';
+let currentSubject = '';
+let currentBody = '';
+
+// ── LANGUAGE ──
+function setLang(l) {
+  lang = l;
+  const t = T[l];
+  document.documentElement.lang = l;
+  document.documentElement.dir = t.dir;
+
+  document.querySelectorAll('.lang-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.toLowerCase() === l);
+  });
+
+  document.getElementById('hero-eyebrow').textContent = t.heroEyebrow;
+  document.getElementById('hero-title').innerHTML = t.heroTitle;
+  document.getElementById('hero-sub').textContent = t.heroSub;
+  document.getElementById('tab-report').textContent = t.tabReport;
+  document.getElementById('tab-map').textContent = t.tabMap;
+  document.getElementById('s1-heading').textContent = t.s1Heading;
+  document.getElementById('s1-sub').textContent = t.s1Sub;
+  document.getElementById('s2-heading').textContent = t.s2Heading;
+  document.getElementById('s2-sub').textContent = t.s2Sub;
+  document.getElementById('label-location').textContent = t.labelLocation;
+  document.getElementById('label-postcode').textContent = t.labelPostcode;
+  document.getElementById('label-desc').textContent = t.labelDesc;
+  document.getElementById('label-when').textContent = t.labelWhen;
+  document.getElementById('label-name').textContent = t.labelName;
+  document.getElementById('label-photo').textContent = t.labelPhoto;
+  document.getElementById('photo-label-text').textContent = t.photoLabelText;
+  document.getElementById('btn-next-text').textContent = t.btnNext;
+  document.getElementById('btn-back-1').textContent = t.btnBack;
+  document.getElementById('btn-restart').textContent = t.btnRestart;
+  document.getElementById('confirm-title').textContent = t.confirmTitle;
+  document.getElementById('confirm-sub').textContent = t.confirmSub;
+  document.getElementById('btn-email-text').textContent = t.btnEmail;
+  document.getElementById('status-note').textContent = t.statusNote;
+  document.getElementById('map-title').textContent = t.mapTitle;
+
+  document.querySelectorAll('[data-t]').forEach(el => {
+    const key = el.getAttribute('data-t');
+    if (t.issueLabels && t.issueLabels[key]) el.textContent = t.issueLabels[key];
+  });
+
+  if (selectedKey) {
+    document.getElementById('selected-chip').textContent = '● ' + (t.issueLabels[selectedKey] || '');
+  }
+}
+
+// ── TABS ──
+function showTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+  if (tab === 'report') {
+    document.getElementById('content-report').classList.add('active');
+    document.getElementById('tab-report').classList.add('active');
+    // Restore step 1 if no step is active
+    const anyActive = document.querySelector('#content-report .step.active');
+    if (!anyActive) {
+      document.getElementById('s1').classList.add('active');
+      setProgress(1);
+    }
+  } else {
+    document.getElementById('content-map').classList.add('active');
+    document.getElementById('tab-map').classList.add('active');
+    setTimeout(() => {
+      initMap();
+      if (map) map.invalidateSize();
+    }, 100);
+  }
+}
+
+// ── PROGRESS ──
+function setProgress(step) {
+  ['ps1','ps2','ps3'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    el.classList.remove('active','done');
+    if (i + 1 < step) el.classList.add('done');
+    if (i + 1 === step) el.classList.add('active');
+  });
+}
+
+// ── STEP NAVIGATION ──
+function toStep1() {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('s1').classList.add('active');
+  setProgress(1);
+  ['inp-location','inp-postcode','inp-desc','inp-when','inp-name'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  photoFile = null;
+  document.getElementById('photo-preview').style.display = 'none';
+  document.getElementById('photo-preview').src = '';
+}
+
+function toStep2(key, email) {
+  selectedKey = key;
+  selectedEmail = email;
+  const t = T[lang];
+  document.getElementById('selected-chip').textContent = '● ' + (t.issueLabels[key] || key);
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('s2').classList.add('active');
+  setProgress(2);
+}
+
+async function toStep3() {
+  const t = T[lang];
+  const loc = document.getElementById('inp-location').value.trim();
+  const postcode = document.getElementById('inp-postcode').value.trim();
+  const desc = document.getElementById('inp-desc').value.trim();
+  const when = document.getElementById('inp-when').value.trim();
+  const name = document.getElementById('inp-name').value.trim();
+
+  if (!loc || !desc) { alert(t.alertFill); return; }
+
+  const btn = document.getElementById('btn-next');
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span> <span>${t.sending}</span>`;
+
+  // Translate to English via Gemini
+  let descEn = desc;
+  if (lang !== 'en') {
+    try {
+      descEn = await translateToEnglish(desc);
+    } catch(e) {
+      console.error('Translation failed, using original:', e);
+    }
+  }
+
+  const issueEn = T.en.issues[selectedKey] || selectedKey;
+  currentSubject = `${issueEn} — ${loc}${postcode ? ', ' + postcode : ''}`;
+  currentBody =
+`Issue: ${issueEn}
+Location: ${loc}${postcode ? '\nPostcode: ' + postcode : ''}
+Description: ${descEn}${when ? '\nWhen noticed: ' + when : ''}${name ? '\nReported by: ' + name : ''}
+
+Sent via fixlambeth.co.uk`;
+
+  const decodedEmail = selectedEmail.replace('%26', '&');
+  currentMailto = `mailto:${decodedEmail}?subject=${encodeURIComponent(currentSubject)}&body=${encodeURIComponent(currentBody)}`;
+
+  document.getElementById('confirm-email').textContent = `→ ${decodedEmail}`;
+  document.getElementById('fallback-to').textContent = decodedEmail;
+  document.getElementById('fallback-subject').textContent = currentSubject;
+  document.getElementById('fallback-body').textContent = currentBody;
+  document.getElementById('fallback-box').style.display = 'none';
+
+  // Save to Airtable
+  try {
+    const fields = {
+      'Issue Type': issueEn,
+      'Location': loc,
+      'Postcode': postcode || '',
+      'Description': descEn,
+      'Language': lang.toUpperCase(),
+      'Date': new Date().toLocaleDateString('en-GB'),
+    };
+    console.log('Saving to Airtable:', fields);
+    const res = await saveToAirtable(fields);
+    console.log('Airtable response:', res);
+  } catch(e) {
+    console.error('Airtable save failed:', e);
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = `<span id="btn-next-text">${t.btnNext}</span> →`;
+
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('s3').classList.add('active');
+  setProgress(3);
+}
+
+// ── GEMINI TRANSLATION via Netlify Function ──
+async function translateToEnglish(text) {
+  const res = await fetch('/.netlify/functions/translate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text })
+  });
+  const data = await res.json();
+  return data.translated || text;
+}
+
+// ── AIRTABLE via Netlify Functions ──
+async function saveToAirtable(fields) {
+  const res = await fetch('/.netlify/functions/save-report', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fields)
+  });
+  const data = await res.json();
+  if (!res.ok) console.error('Airtable error:', data);
+  return data;
+}
+
+async function fetchReports() {
+  const res = await fetch('/.netlify/functions/get-reports');
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+// ── PHOTO ──
+function handlePhoto(input) {
+  if (input.files && input.files[0]) {
+    photoFile = input.files[0];
+    const reader = new FileReader();
+    reader.onload = e => {
+      const preview = document.getElementById('photo-preview');
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+    };
+    reader.readAsDataURL(photoFile);
+  }
+}
+
+// ── MAP ──
+function getColour(issue) {
+  const key = Object.keys(ISSUE_COLOURS).find(k => issue && issue.toLowerCase().includes(k));
+  return key ? ISSUE_COLOURS[key] : '#5b2be8';
+}
+
+async function geocodePostcode(postcode) {
+  if (!postcode) return null;
+  try {
+    const clean = postcode.trim().replace(/\s+/g, '');
+    const res = await fetch(`https://api.postcodes.io/postcodes/${clean}`);
+    const data = await res.json();
+    if (data.status === 200 && data.result) {
+      return [data.result.latitude, data.result.longitude];
+    }
+  } catch(e) {}
+  return null;
+}
+
+async function initMap() {
+  if (map) {
+    map.invalidateSize();
+    return;
+  }
+
+  const mapEl = document.getElementById('map');
+  if (!mapEl) return;
+
+  map = L.map('map').setView([51.462, -0.120], 12);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 18,
+  }).addTo(map);
+
+  try {
+    const records = await fetchReports();
+    document.getElementById('report-count').textContent = `${records.length} report${records.length !== 1 ? 's' : ''}`;
+
+    let placed = 0;
+
+    for (const r of records) {
+      const f = r.fields;
+
+      // Use stored coords if available, otherwise geocode
+      let latlng = null;
+      if (f.Lat && f.Lng) {
+        latlng = [parseFloat(f.Lat), parseFloat(f.Lng)];
+      } else if (f.Postcode) {
+        latlng = await geocodePostcode(f.Postcode);
+      }
+
+      if (!latlng) continue;
+
+      const jitter = [(Math.random() - 0.5) * 0.002, (Math.random() - 0.5) * 0.002];
+      const colour = getColour(f['Issue Type'] || '');
+
+      const marker = L.circleMarker(
+        [latlng[0] + jitter[0], latlng[1] + jitter[1]],
+        { radius: 9, fillColor: colour, color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.88 }
+      ).addTo(map);
+
+      marker.bindPopup(`
+        <strong>${f['Issue Type'] || 'Issue'}</strong><br>
+        📍 ${f.Location || f.Postcode || ''}<br>
+        ${f.Description ? '<em>' + f.Description.substring(0, 120) + (f.Description.length > 120 ? '...' : '') + '</em><br>' : ''}
+        <span style="color:#7a7589;font-size:11px">${f.Status || 'Open'} · ${f.Language || ''}</span>
+      `);
+      placed++;
+    }
+
+    if (placed === 0) {
+      document.getElementById('report-count').textContent = 'No reports yet — be the first!';
+    } else {
+      document.getElementById('report-count').textContent = `${placed} report${placed !== 1 ? 's' : ''}`;
+    }
+
+  } catch(e) {
+    console.error('Map load failed:', e);
+    document.getElementById('report-count').textContent = 'Could not load reports';
+  }
+}
+
+// ── EMAIL ──
+function sendEmail() {
+  if (!currentMailto) return;
+  window.location.href = currentMailto;
+  // Show fallback after short delay in case mailto didn't open
+  setTimeout(() => {
+    document.getElementById('fallback-box').style.display = 'block';
+  }, 1500);
+}
+
+function copyEmailBody() {
+  const text = `To: ${selectedEmail}\nSubject: ${currentSubject}\n\n${currentBody}`;
+  navigator.clipboard.writeText(text).then(() => {
+    const ok = document.getElementById('copy-ok');
+    ok.style.display = 'inline';
+    setTimeout(() => ok.style.display = 'none', 2000);
+  });
+}
+
+// ── ISSUE CARD CLICKS ──
+document.querySelectorAll('.issue-card').forEach(card => {
+  card.addEventListener('click', () => {
+    toStep2(card.dataset.key, card.dataset.email);
+  });
+});
+
+// ── FOOTER DATE ──
+document.getElementById('footer-date').textContent = new Date().toLocaleDateString('en-GB', { year: 'numeric', month: 'long' });
+</script>
+
+</body>
+</html>
