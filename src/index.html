@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#5b2be8">
+<title>Fix Lambeth — Report a problem</title>
+<meta name="description" content="A simpler way to report issues to Lambeth Council. Available in 5 languages.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Fix <span>Lambeth</span></div>
+  <div class="lang-switcher">
+    <button class="lang-btn active">EN</button>
+    <button class="lang-btn">PT</button>
+    <button class="lang-btn">ES</button>
+    <button class="lang-btn">AR</button>
+    <button class="lang-btn">PL</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" id="tab-report">Report a problem</button>
+  <button class="tab-btn" id="tab-map">See reports map</button>
+</div>
+
+<!-- REPORT TAB -->
+<div class="tab-content active" id="content-report">
+
+  <div class="hero">
+    <div class="hero-eyebrow" id="hero-eyebrow">For Lambeth residents</div>
+    <h1 id="hero-title">Fix Lambeth.<br>Report it fast.</h1>
+    <p id="hero-sub">Pick your issue, add the details — we'll send it to the right team at Lambeth Council.</p>
+  </div>
+
+  <div class="app-wrap">
+    <div class="progress-bar">
+      <div class="prog-seg active" id="ps1"></div>
+      <div class="prog-seg" id="ps2"></div>
+      <div class="prog-seg" id="ps3"></div>
+    </div>
+
+    <!-- STEP 1: ISSUE -->
+    <div class="step active" id="s1">
+      <div class="step-heading" id="s1-heading">What's the problem?</div>
+      <div class="step-sub" id="s1-sub">Tap the issue you want to report.</div>
+      <div class="issue-grid">
+        <button class="issue-card" data-key="flytipping" data-email="environment@lambeth.gov.uk">
+          <span class="issue-emoji">🗑️</span>
+          <span class="issue-label" data-t="flytipping">Fly-tipping</span>
+        </button>
+        <button class="issue-card" data-key="pothole" data-email="t%26hcallcentre@lambeth.gov.uk">
+          <span class="issue-emoji">🕳️</span>
+          <span class="issue-label" data-t="pothole">Pothole / Pavement</span>
+        </button>
+        <button class="issue-card" data-key="streetlight" data-email="t%26hcallcentre@lambeth.gov.uk">
+          <span class="issue-emoji">💡</span>
+          <span class="issue-label" data-t="streetlight">Broken streetlight</span>
+        </button>
+        <button class="issue-card" data-key="graffiti" data-email="environment@lambeth.gov.uk">
+          <span class="issue-emoji">🎨</span>
+          <span class="issue-label" data-t="graffiti">Graffiti</span>
+        </button>
+        <button class="issue-card" data-key="noise" data-email="noise@lambeth.gov.uk">
+          <span class="issue-emoji">🔊</span>
+          <span class="issue-label" data-t="noise">Noise nuisance</span>
+        </button>
+        <button class="issue-card" data-key="drain" data-email="t%26hcallcentre@lambeth.gov.uk">
+          <span class="issue-emoji">🌊</span>
+          <span class="issue-label" data-t="drain">Blocked drain</span>
+        </button>
+        <button class="issue-card" data-key="tree" data-email="parks@lambeth.gov.uk">
+          <span class="issue-emoji">🌳</span>
+          <span class="issue-label" data-t="tree">Tree / Overgrowth</span>
+        </button>
+        <button class="issue-card" data-key="asb" data-email="PPARS@lambeth.gov.uk">
+          <span class="issue-emoji">⚠️</span>
+          <span class="issue-label" data-t="asb">Anti-social behaviour</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 2: DETAILS -->
+    <div class="step" id="s2">
+      <div class="selected-chip" id="selected-chip"></div>
+      <div class="step-heading" id="s2-heading">Where and what?</div>
+      <div class="step-sub" id="s2-sub">Give us the details so the council can act.</div>
+
+      <div class="field">
+        <label id="label-location">Street address</label>
+        <input type="text" id="inp-location" placeholder="e.g. 42 Brixton Road, SW9" autocomplete="street-address" />
+      </div>
+
+      <div class="field">
+        <label id="label-postcode">Postcode</label>
+        <input type="text" id="inp-postcode" placeholder="e.g. SW9 8DN" autocomplete="postal-code" autocapitalize="characters" autocorrect="off" />
+        <span id="postcode-error" style="display:none; color:var(--accent-2); font-size:0.75rem; font-weight:600; margin-top:0.3rem;">Enter a valid UK postcode (e.g. SW9 8DN)</span>
+      </div>
+
+      <div class="field">
+        <label id="label-desc">Describe the issue</label>
+        <textarea id="inp-desc" rows="4" placeholder="Size, exact spot, how long it's been there, any safety risk..."></textarea>
+      </div>
+
+      <div class="field">
+        <label id="label-when">When did you notice it?</label>
+        <input type="text" id="inp-when" placeholder="e.g. This morning, last week..." />
+      </div>
+
+      <div class="field">
+        <label id="label-name">Your name</label>
+        <input type="text" id="inp-name" placeholder="e.g. Sarah Jones" autocomplete="name" autocapitalize="words" />
+      </div>
+
+      <div class="field">
+        <label id="label-photo">Photo (optional — attach it in your email)</label>
+        <div class="photo-upload" id="photo-upload-area">
+          <label class="photo-upload-label">
+            <span class="icon">📷</span>
+            <span id="photo-label-text">Tap to take a reference photo</span>
+          </label>
+          <input type="file" id="photo-input" accept="image/*">
+          <img id="photo-preview" class="photo-preview" alt="Preview" />
+        </div>
+      </div>
+
+      <button class="btn-primary" id="btn-next">
+        <span id="btn-next-text">Prepare my report</span> →
+      </button>
+      <button class="btn-back" id="btn-back-1">← Back</button>
+    </div>
+
+    <!-- STEP 3: CONFIRM -->
+    <div class="step" id="s3">
+      <div class="confirm-card">
+        <div class="confirm-icon">✅</div>
+        <div class="confirm-title" id="confirm-title">Your report is ready</div>
+        <div class="confirm-sub" id="confirm-sub">Tap the button below to open your email app. The report is already written — just hit send.</div>
+        <div class="confirm-email" id="confirm-email"></div>
+
+        <button class="btn-email" id="email-btn">
+          <span id="btn-email-text">Open email app to send →</span>
+          <span>✉️</span>
+        </button>
+
+        <div id="fallback-box" style="margin-top:1rem; background:#f8f5ff; border:1.5px solid #e2ddf5; border-radius:10px; padding:1rem;">
+          <p style="font-size:0.75rem; font-weight:700; color:#5b2be8; margin-bottom:0.5rem; text-transform:uppercase; letter-spacing:0.05em;">If the button didn't work — send this email manually:</p>
+          <p style="font-size:0.82rem; margin-bottom:0.3rem;"><strong>To:</strong> <span id="fallback-to"></span></p>
+          <p style="font-size:0.82rem; margin-bottom:0.3rem;"><strong>Subject:</strong> <span id="fallback-subject"></span></p>
+          <div style="background:#fff; border:1px solid #e2ddf5; border-radius:8px; padding:0.8rem; margin-top:0.5rem; font-size:0.82rem; white-space:pre-wrap; line-height:1.6;" id="fallback-body"></div>
+          <button id="copy-btn" style="margin-top:0.6rem; background:none; border:1.5px solid #5b2be8; border-radius:8px; padding:0.4rem 0.8rem; font-size:0.75rem; font-weight:700; color:#5b2be8; cursor:pointer;">Copy email text</button>
+          <span id="copy-ok" style="font-size:0.75rem; color:#2ec4b6; margin-left:0.5rem; display:none;">✓ Copied!</span>
+        </div>
+
+        <p class="status-note" id="status-note">Your report has been saved to our map.</p>
+      </div>
+      <button class="btn-back" id="btn-restart">← Report another issue</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- MAP TAB -->
+<div class="tab-content" id="content-map">
+  <div class="map-wrap">
+    <div class="map-header">
+      <div class="map-title" id="map-title">Reports in Lambeth</div>
+      <div class="report-count" id="report-count">Loading...</div>
+    </div>
+    <div id="map">
+      <div id="map-spinner" style="display:flex; align-items:center; justify-content:center; height:100%; background:var(--surface); border-radius:var(--radius); color:var(--ink-soft); font-size:0.88rem; gap:0.5rem;">
+        <span class="spinner" style="border-color:var(--border); border-top-color:var(--accent); width:20px; height:20px;"></span>
+        Loading reports...
+      </div>
+    </div>
+    <div class="map-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#e84855"></div> Fly-tipping / Graffiti</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#5b2be8"></div> Roads / Drains</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f7c59f; border: 1px solid #ccc"></div> Streetlight</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2ec4b6"></div> Trees / Parks</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff9f1c"></div> Noise / ASB</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  Built by <a href="https://bensharoni.com">Ben Sharoni</a> · Not affiliated with Lambeth Council · <span id="footer-date"></span>
+</div>
+
+<script type="module" src="/js/main.js"></script>
+
+</body>
+</html>
