@@ -45,20 +45,18 @@ export async function initMap() {
   const spinner = document.getElementById('map-spinner')
   if (spinner) spinner.style.display = 'flex'
 
-  L = (await import('leaflet')).default
-  await import('leaflet/dist/leaflet.css')
-
-  map = L.map('map').setView([51.462, -0.120], 12)
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
-    maxZoom: 18,
-  }).addTo(map)
-
   try {
-    const records = await fetchReports()
-    document.getElementById('report-count').textContent = `${records.length} report${records.length !== 1 ? 's' : ''}`
+    L = (await import('leaflet')).default
+    await import('leaflet/dist/leaflet.css')
 
+    map = L.map('map').setView([51.462, -0.120], 12)
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 18,
+    }).addTo(map)
+
+    const records = await fetchReports()
     let placed = 0
 
     for (const r of records) {
@@ -88,11 +86,9 @@ export async function initMap() {
       placed++
     }
 
-    if (placed === 0) {
-      document.getElementById('report-count').textContent = 'No reports yet — be the first!'
-    } else {
-      document.getElementById('report-count').textContent = `${placed} report${placed !== 1 ? 's' : ''}`
-    }
+    document.getElementById('report-count').textContent = placed === 0
+      ? 'No reports yet — be the first!'
+      : `${placed} report${placed !== 1 ? 's' : ''}`
   } catch (e) {
     console.error('Map load failed:', e)
     document.getElementById('report-count').textContent = 'Could not load reports'

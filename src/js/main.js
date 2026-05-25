@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('content-map').classList.add('active')
     tabMap.classList.add('active')
     setTimeout(() => {
-      initMap()
+      initMap().catch(console.error)
     }, 100)
   })
 

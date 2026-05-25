@@ -172,8 +172,9 @@
       <div class="map-title" id="map-title">Reports in Lambeth</div>
       <div class="report-count" id="report-count">Loading...</div>
     </div>
-    <div id="map">
-      <div id="map-spinner" style="display:flex; align-items:center; justify-content:center; height:100%; background:var(--surface); border-radius:var(--radius); color:var(--ink-soft); font-size:0.88rem; gap:0.5rem;">
+    <div style="position:relative">
+      <div id="map"></div>
+      <div id="map-spinner" style="display:flex; align-items:center; justify-content:center; position:absolute; inset:0; background:var(--surface); border-radius:var(--radius); color:var(--ink-soft); font-size:0.88rem; gap:0.5rem; z-index:10;">
         <span class="spinner" style="border-color:var(--border); border-top-color:var(--accent); width:20px; height:20px;"></span>
         Loading reports...
       </div>
