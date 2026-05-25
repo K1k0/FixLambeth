@@ -21,8 +21,8 @@ export async function saveReport(fields) {
 
 export async function fetchReports() {
   const res = await fetch('/.netlify/functions/get-reports')
-  if (!res.ok) throw new Error(`API returned ${res.status}`)
   const data = await res.json()
+  if (!res.ok) throw new Error(`API returned ${res.status}: ${data.error || 'unknown'}`)
   return Array.isArray(data) ? data : []
 }
 
