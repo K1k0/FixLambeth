@@ -2,6 +2,14 @@ const { getStore } = require('@netlify/blobs')
 
 const ALLOWED_ORIGINS = ['https://fixlambeth.co.uk', 'https://www.fixlambeth.co.uk', 'https://fixlambeth.netlify.app']
 
+function getBlobStore(name) {
+  return getStore({
+    name,
+    siteID: process.env.SITE_ID,
+    token: process.env.NETLIFY_ACCESS_TOKEN,
+  })
+}
+
 async function geocodePostcode(postcode) {
   if (!postcode) return null
   try {
@@ -47,7 +55,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const store = getStore('reports')
+    const store = getBlobStore('reports')
     let totalMigrated = 0
     let offset = null
 

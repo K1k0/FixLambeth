@@ -2,6 +2,14 @@ const { getStore } = require('@netlify/blobs')
 
 const ALLOWED_ORIGINS = ['https://fixlambeth.co.uk', 'https://www.fixlambeth.co.uk', 'https://fixlambeth.netlify.app']
 
+function getBlobStore(name) {
+  return getStore({
+    name,
+    siteID: process.env.SITE_ID,
+    token: process.env.NETLIFY_ACCESS_TOKEN,
+  })
+}
+
 exports.handler = async (event) => {
   const origin = event.headers.origin || ''
   const corsHeaders = ALLOWED_ORIGINS.includes(origin)
@@ -13,11 +21,19 @@ exports.handler = async (event) => {
   }
 
   try {
-    const store = getStore('reports')
-    const result = await store.list()
+    const store = getBlobStore('reports')
+    let allBlobs = []
+    let cursor
+
+    do {
+      const result = await store.list({ cursor, paginate: true })
+      allBlobs = allBlobs.concat(result.blobs)
+      cursor = result.nextCursor
+    } while (cursor)
+
     const records = []
 
-    for (const entry of result.blobs) {
+    for (const entry of allBlobs) {
       try {
         const blob = await store.get(entry.key)
         if (blob) {

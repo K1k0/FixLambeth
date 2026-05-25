@@ -2,6 +2,14 @@ const { getStore } = require('@netlify/blobs')
 
 const ALLOWED_ORIGINS = ['https://fixlambeth.co.uk', 'https://www.fixlambeth.co.uk', 'https://fixlambeth.netlify.app']
 
+function getBlobStore(name) {
+  return getStore({
+    name,
+    siteID: process.env.SITE_ID,
+    token: process.env.NETLIFY_ACCESS_TOKEN,
+  })
+}
+
 exports.handler = async (event) => {
   const origin = event.headers.origin || ''
   const corsHeaders = ALLOWED_ORIGINS.includes(origin)
@@ -22,7 +30,7 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers: corsHeaders, body: 'Missing key parameter' }
     }
 
-    const store = getStore('photos')
+    const store = getBlobStore('photos')
     const blob = await store.get(key)
     if (!blob) {
       return { statusCode: 404, headers: corsHeaders, body: 'Photo not found' }

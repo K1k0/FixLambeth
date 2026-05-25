@@ -8,8 +8,16 @@ const RATE_LIMIT_MAX = 20
 const RATE_LIMIT_WINDOW = 3600000
 const crypto = require('crypto')
 
+function getBlobStore(name) {
+  return getStore({
+    name,
+    siteID: process.env.SITE_ID,
+    token: process.env.NETLIFY_ACCESS_TOKEN,
+  })
+}
+
 async function checkRateLimit(ip) {
-  const store = getStore('rate-limits')
+  const store = getBlobStore('rate-limits')
   const key = `rl_photo_${crypto.createHash('sha256').update(ip).digest('hex').substring(0, 16)}`
   const now = Date.now()
   const existing = await store.get(key)
@@ -70,7 +78,7 @@ exports.handler = async (event) => {
     const ext = mime.split('/')[1]
     const key = `photo_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`
 
-    const store = getStore('photos')
+    const store = getBlobStore('photos')
     await store.set(key, JSON.stringify({ mime, data: matches[2] }))
 
     return {

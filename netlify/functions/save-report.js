@@ -24,11 +24,18 @@ const VALID_ISSUE_TYPES = [
 
 const RATE_LIMIT_MAX = 30
 const RATE_LIMIT_WINDOW = 3600000
-
 const crypto = require('crypto')
 
+function getBlobStore(name) {
+  return getStore({
+    name,
+    siteID: process.env.SITE_ID,
+    token: process.env.NETLIFY_ACCESS_TOKEN,
+  })
+}
+
 async function checkRateLimit(ip) {
-  const store = getStore('rate-limits')
+  const store = getBlobStore('rate-limits')
   const key = `rl_save_${crypto.createHash('sha256').update(ip).digest('hex').substring(0, 16)}`
   const now = Date.now()
   const existing = await store.get(key)
@@ -105,7 +112,7 @@ exports.handler = async (event) => {
 
     fields.Status = 'Open'
 
-    const store = getStore('reports')
+    const store = getBlobStore('reports')
     const key = `report_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
     await store.set(key, JSON.stringify({ id: key, fields }))
 
