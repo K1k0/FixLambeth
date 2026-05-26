@@ -22,18 +22,10 @@ exports.handler = async (event) => {
 
   try {
     const store = getBlobStore('reports')
-    let allBlobs = []
-    let cursor
-
-    do {
-      const result = await store.list({ cursor, paginate: true })
-      allBlobs = allBlobs.concat(result.blobs)
-      cursor = result.nextCursor
-    } while (cursor)
-
+    const { blobs } = await store.list()
     const records = []
 
-    for (const entry of allBlobs) {
+    for (const entry of blobs || []) {
       try {
         const blob = await store.get(entry.key)
         if (blob) {
