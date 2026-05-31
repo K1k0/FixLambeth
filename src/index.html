@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 </head>
 <body>
 
@@ -64,7 +65,6 @@
         </div>
         <span class="issue-label" data-t="flytipping">Fly-tipping</span>
         <span class="issue-team">Environment</span>
-        <span class="issue-check"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
       </button>
       <button class="issue-card" data-key="pothole" data-email="highways@lambeth.gov.uk">
         <div class="issue-icon-tile">
@@ -72,7 +72,6 @@
         </div>
         <span class="issue-label" data-t="pothole">Pothole / Pavement</span>
         <span class="issue-team">Highways</span>
-        <span class="issue-check"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
       </button>
       <button class="issue-card" data-key="streetlight" data-email="highways@lambeth.gov.uk">
         <div class="issue-icon-tile">
@@ -80,7 +79,6 @@
         </div>
         <span class="issue-label" data-t="streetlight">Broken streetlight</span>
         <span class="issue-team">Highways</span>
-        <span class="issue-check"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
       </button>
       <button class="issue-card" data-key="graffiti" data-email="environment@lambeth.gov.uk">
         <div class="issue-icon-tile">
@@ -88,7 +86,6 @@
         </div>
         <span class="issue-label" data-t="graffiti">Graffiti</span>
         <span class="issue-team">Environment</span>
-        <span class="issue-check"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
       </button>
       <button class="issue-card" data-key="noise" data-email="noise@lambeth.gov.uk">
         <div class="issue-icon-tile">
@@ -96,7 +93,6 @@
         </div>
         <span class="issue-label" data-t="noise">Noise nuisance</span>
         <span class="issue-team">Noise team</span>
-        <span class="issue-check"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
       </button>
       <button class="issue-card" data-key="drain" data-email="highways@lambeth.gov.uk">
         <div class="issue-icon-tile">
@@ -104,7 +100,6 @@
         </div>
         <span class="issue-label" data-t="drain">Blocked drain</span>
         <span class="issue-team">Highways</span>
-        <span class="issue-check"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
       </button>
       <button class="issue-card" data-key="tree" data-email="parks@lambeth.gov.uk">
         <div class="issue-icon-tile">
@@ -112,7 +107,6 @@
         </div>
         <span class="issue-label" data-t="tree">Tree / Overgrowth</span>
         <span class="issue-team">Parks</span>
-        <span class="issue-check"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
       </button>
       <button class="issue-card" data-key="asb" data-email="PPARS@lambeth.gov.uk">
         <div class="issue-icon-tile">

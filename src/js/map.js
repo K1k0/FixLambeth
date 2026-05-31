@@ -44,9 +44,15 @@ export async function initMap() {
 
   try {
     L = (await import('leaflet')).default
-    await import('leaflet/dist/leaflet.css')
 
     map = L.map('map').setView([51.462, -0.120], 12)
+
+    if (mapEl.offsetWidth === 0 || mapEl.offsetHeight === 0) {
+      map.remove()
+      map = null
+      requestAnimationFrame(() => initMap())
+      return
+    }
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',

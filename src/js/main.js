@@ -81,9 +81,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'))
     document.getElementById('content-map').classList.add('active')
     tabMap.classList.add('active')
-    setTimeout(() => {
-      initMap().catch(console.error)
-    }, 100)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        initMap().catch(console.error)
+      })
+    })
     resetScroll()
   })
 
