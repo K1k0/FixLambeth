@@ -13,7 +13,6 @@ const ISSUE_COLOURS = {
 }
 
 let map = null
-let L = null
 
 function getColour(issue) {
   const key = Object.keys(ISSUE_COLOURS).find(k => issue && issue.toLowerCase().includes(k))
@@ -43,7 +42,10 @@ export async function initMap() {
   if (!mapEl) return
 
   try {
-    L = (await import('leaflet')).default
+    if (typeof L === 'undefined') {
+      console.error('Leaflet not loaded')
+      return
+    }
 
     map = L.map('map').setView([51.462, -0.120], 12)
 

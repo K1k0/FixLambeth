@@ -258,3 +258,107 @@ Verification checks:
 3. **Systematic debugging is faster than thrashing** — following the 4-phase process (root cause → pattern → hypothesis → implementation) found all 5 bugs in one pass. Random fixes would have taken multiple iterations.
 
 4. **Skills add structure but don't replace judgment** — the `systematic-debugging` skill enforced the Iron Law ("no fixes without root cause"), but the orchestrator still had to decide which bugs to prioritize and how to scope fixes.
+
+---
+
+# Debugging Session 2 — Map Rendering + Category Ticks
+
+> Two independent issues fixed in a single multi-agent pass: Leaflet map not rendering, and unwanted checkmark icons on category cards.
+
+## Orchestration Model
+
+```
+Orchestrator
+├── Auditor 1 (explore)  → Map rendering root cause analysis
+├── Auditor 2 (explore)  → issue-check class usage audit
+├── Builder (general)    → Apply all map fixes + remove tick elements
+├── Critic (explore)     → Verify tick removal won't break selection logic
+└── QA (orchestrator)    → Build + verify dist output
+```
+
+The loop ran **once** — both issues resolved on the first pass.
+
+## Issue 1: Map Not Rendering
+
+### Auditor Findings (Root Causes)
+
+| # | Severity | Root Cause | Location |
+|---|---|---|---|
+| 1 | Critical | Dynamic CSS import doesn't guarantee styles applied before map init | `map.js:47` |
+| 2 | High | `#map` z-index (1) below header/nav (100) — tiles obscured | `style.css:881` |
+| 3 | Medium | `setTimeout(100)` insufficient for tab-switch paint cycle | `main.js:84-86` |
+| 4 | Low | No dimension guard — zero-size container silently fails | `map.js:49` |
+
+**What was NOT the problem:**
+- `#map` container exists in HTML with correct `height: 420px`
+- CARTO tile URL is valid
+- Leaflet is in `package.json`
+- Tab switching logic correctly toggles `.active`
+
+### Fixes Applied
+
+1. **Static Leaflet CSS** — Added `<link>` tag in `<head>`, removed dynamic `await import('leaflet/dist/leaflet.css')`
+2. **z-index raised** — `#map` changed from `z-index: 1` to `z-index: 10`
+3. **Double rAF** — Replaced `setTimeout(100)` with `requestAnimationFrame(() => requestAnimationFrame(() => initMap()))`
+4. **Dimension guard** — Added check: if container has zero dimensions, `map.remove()`, reset to `null`, and retry via `requestAnimationFrame`
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| `src/index.html` | Added Leaflet CSS `<link>` in `<head>` |
+| `src/js/map.js` | Removed dynamic CSS import, added dimension guard |
+| `src/js/main.js` | Double rAF instead of setTimeout |
+| `src/css/style.css` | `#map` z-index: 1 → 10 |
+
+## Issue 2: Remove Checkmark Ticks from Category Cards
+
+### Auditor Findings
+
+- 8 `<span class="issue-check">` elements in HTML (one per card)
+- **Zero CSS rules** target `.issue-check` — completely unstyled
+- **Zero JS references** to `.issue-check` — dead markup
+- Visual selected-state checkmark already provided by `.issue-card.selected::after` pseudo-element
+
+### Critic Verdict: SAFE
+
+- Selection logic uses `.selected` class on the card itself, independent of `.issue-check`
+- Click handler reads `dataset.key` from the card, not from child elements
+- Removing the spans changes flex layout negligibly (12px SVG removed from column)
+- `min-height: 44px` prevents card collapse
+
+### Fix Applied
+
+Removed all 8 `<span class="issue-check">...</span>` elements from `src/index.html`.
+
+## QA Verification
+
+```
+npm run build → clean, 820ms, 19 modules transformed
+```
+
+| Check | Result |
+|---|---|
+| Leaflet CSS CDN link in dist HTML | ✓ Present |
+| `issue-check` in dist | ✓ Zero matches (removed) |
+| Leaflet JS bundled | ✓ 150KB in dist/assets |
+| App JS bundled | ✓ 35KB in dist/assets |
+| CSS bundled | ✓ 22KB in dist/assets |
+
+## What Worked Well
+
+1. **Parallel auditors** — Running two `explore` agents simultaneously (map audit + tick audit) saved time since they analyzed independent concerns
+2. **Critic before apply** — Having the critic verify tick removal safety *before* the builder applied changes prevented a potential regression
+3. **Root-cause-first approach** — The map audit identified 4 distinct issues (CSS timing, z-index, paint cycle, dimension guard). Fixing only one would have left the map broken
+4. **Static CSS over dynamic import** — Adding Leaflet CSS as a `<link>` tag eliminated a race condition that `await import()` couldn't solve
+5. **Double rAF pattern** — More reliable than arbitrary `setTimeout` delays for ensuring DOM paint before initialization
+
+## What to Avoid
+
+1. **Don't trust `await import('*.css')` for critical styles** — Vite resolves the module fetch but doesn't wait for browser style recalculation/paint. Use static `<link>` for critical CSS
+2. **Don't use arbitrary `setTimeout` delays for DOM readiness** — 100ms may work on dev machines but fails on slow devices. Use `requestAnimationFrame` (double for paint cycle) instead
+3. **Don't set low z-index on interactive containers** — `#map` at `z-index: 1` was below sticky header (`100`) and fixed nav (`100`). Always audit stacking contexts when elements disappear behind overlays
+4. **Don't skip the dimension guard** — Leaflet silently accepts zero-dimension containers and renders nothing. The guard (`offsetWidth === 0`) provides a safety net
+5. **Don't leave dead markup in templates** — The 8 `.issue-check` spans had no CSS, no JS, and were visually redundant. They accumulated from a previous iteration and should have been cleaned up
+6. **Don't assume build success = runtime success** — The build passed clean but the map was completely broken at runtime. Always verify critical features (map rendering, tab switching) separately
+7. **Don't fix symptoms without root cause** — A naive fix might have been "increase setTimeout to 500ms" — this would have masked the real CSS timing and z-index issues
