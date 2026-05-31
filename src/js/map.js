@@ -47,14 +47,12 @@ export async function initMap() {
       return
     }
 
-    map = L.map('map').setView([51.462, -0.120], 12)
-
     if (mapEl.offsetWidth === 0 || mapEl.offsetHeight === 0) {
-      map.remove()
-      map = null
       requestAnimationFrame(() => initMap())
       return
     }
+
+    map = L.map('map').setView([51.462, -0.120], 12)
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
@@ -62,7 +60,13 @@ export async function initMap() {
       maxZoom: 19,
     }).addTo(map)
 
-    const records = await fetchReports()
+    let records = []
+    try {
+      records = await fetchReports()
+    } catch (e) {
+      console.warn('Could not fetch reports:', e)
+    }
+
     let placed = 0
 
     for (const r of records) {
