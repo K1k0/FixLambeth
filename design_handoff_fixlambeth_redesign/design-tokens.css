@@ -1,0 +1,53 @@
+/* FixLambeth — "Sleek Civic" design tokens
+   Paste into :root in src/css/style.css (replaces the old purple token block).
+   Locked palette: Cool canvas + slate-blue accent. */
+
+:root {
+  /* ---- Color ---- */
+  --accent:        #3f4d7a;
+  --bg:            #eef1f6;
+  --surface:       #ffffff;
+  --soft:          #f7f9fc;
+  --ink:           #15191f;
+  --muted:         #69707e;
+  --faint:         #9aa0ad;
+  --border:        #e1e5ec;
+  --track:         #e1e5ec;
+  --error:         #c0533f;
+
+  /* Derived accent fills (modern browsers support color-mix; fallbacks below) */
+  --accent-tint:        color-mix(in srgb, var(--accent) 8%,  var(--surface));
+  --accent-tint-strong: color-mix(in srgb, var(--accent) 14%, var(--surface));
+
+  /* Map category colors (functional) */
+  --cat-env:   #c2683f; /* Environment: fly-tipping, graffiti */
+  --cat-road:  #3f4d7a; /* Roads & drains: pothole, drain, streetlight */
+  --cat-parks: #4f7a5e; /* Trees & parks */
+  --cat-asb:   #9a7a3f; /* Noise & ASB */
+
+  /* ---- Type ---- */
+  --font-display: 'Hanken Grotesk', system-ui, sans-serif; /* headlines, weight 700 */
+  --font-ui:      'Public Sans', system-ui, sans-serif;    /* everything else */
+
+  /* ---- Form ---- */
+  --radius: 12px;          /* global default (icon tiles use max(8px, radius - 2)) */
+  --radius-pill: 100px;
+  --hairline: 1px;
+  --stroke: 1.5px;         /* cards, inputs, selected states */
+
+  /* ---- Spacing ---- */
+  --pad-screen: 24px;
+  --gap-grid: 11px;
+  --gap-field: 16px;
+}
+
+/* Fallback for browsers without color-mix() */
+@supports not (background: color-mix(in srgb, red 8%, white)) {
+  :root {
+    --accent-tint:        #eceef4;
+    --accent-tint-strong: #dde0ec;
+  }
+}
+
+/* Replace the old Inter <link> in index.html with:
+   <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"> */

@@ -1,0 +1,41 @@
+{
+  "_comment": "New copy strings introduced by the Sleek Civic redesign. Merge these keys into each locale file (en/pt/es/ar/pl). English values shown; translate the rest. Keep existing keys (issue labels, field labels, etc.) as they are.",
+
+  "hero_eyebrow": "Lambeth Council",
+  "hero_title": "Report a problem.",
+  "hero_sub": "Choose what you'd like to report. We'll route it to the right team and write the email for you.",
+
+  "reassure_no_account": "No account",
+  "reassure_languages": "5 languages",
+  "reassure_time": "~1 min",
+
+  "step_label": "Step {n} of 3",
+
+  "s2_title": "Where and what?",
+  "s2_sub": "Add the details so the {team} team can act quickly.",
+  "back": "Back",
+  "photo_add": "Add a photo",
+  "postcode_error": "Enter a valid UK postcode",
+  "btn_prepare": "Prepare my report",
+
+  "s3_title": "Your report is ready.",
+  "s3_sub": "We've written it for you. Open your email app and just hit send — nothing else to fill in.",
+  "email_to": "To",
+  "email_subject": "Subject",
+  "btn_open_email": "Open email app to send",
+  "copy_prompt": "Button not working? Copy the text",
+  "copy_done": "Copied to clipboard",
+  "map_note": "Your report has been added to the Lambeth reports map so neighbours can see it too.",
+  "report_another": "Report another issue",
+
+  "nav_report": "Report",
+  "nav_map": "Map",
+  "community_eyebrow": "Community",
+  "map_title": "Reports nearby.",
+  "map_stat": "{count} this month",
+  "recent_reports": "Recent reports",
+  "legend_env": "Environment",
+  "legend_road": "Roads & drains",
+  "legend_parks": "Trees & parks",
+  "legend_asb": "Noise & ASB"
+}

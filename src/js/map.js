@@ -2,14 +2,14 @@ import { fetchReports } from './api.js'
 import { esc } from './utils.js'
 
 const ISSUE_COLOURS = {
-  flytipping: '#e84855',
-  graffiti: '#e84855',
-  pothole: '#5b2be8',
-  drain: '#5b2be8',
-  streetlight: '#f7c59f',
-  tree: '#2ec4b6',
-  noise: '#ff9f1c',
-  asb: '#ff9f1c',
+  flytipping: '#c2683f',
+  graffiti: '#c2683f',
+  pothole: '#3f4d7a',
+  drain: '#3f4d7a',
+  streetlight: '#3f4d7a',
+  tree: '#4f7a5e',
+  noise: '#9a7a3f',
+  asb: '#9a7a3f',
 }
 
 let map = null
@@ -17,7 +17,7 @@ let L = null
 
 function getColour(issue) {
   const key = Object.keys(ISSUE_COLOURS).find(k => issue && issue.toLowerCase().includes(k))
-  return key ? ISSUE_COLOURS[key] : '#5b2be8'
+  return key ? ISSUE_COLOURS[key] : '#3f4d7a'
 }
 
 async function geocodePostcode(postcode) {
@@ -42,18 +42,16 @@ export async function initMap() {
   const mapEl = document.getElementById('map')
   if (!mapEl) return
 
-  const spinner = document.getElementById('map-spinner')
-  if (spinner) spinner.style.display = 'flex'
-
   try {
     L = (await import('leaflet')).default
     await import('leaflet/dist/leaflet.css')
 
     map = L.map('map').setView([51.462, -0.120], 12)
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-      maxZoom: 18,
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+      subdomains: 'abcd',
+      maxZoom: 19,
     }).addTo(map)
 
     const records = await fetchReports()
@@ -74,15 +72,24 @@ export async function initMap() {
       const jitter = [(Math.random() - 0.5) * 0.002, (Math.random() - 0.5) * 0.002]
       const colour = getColour(f['Issue Type'] || '')
 
-      L.circleMarker(
-        [latlng[0] + jitter[0], latlng[1] + jitter[1]],
-        { radius: 9, fillColor: colour, color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.88 }
-      ).addTo(map).bindPopup(`
-        <strong>${esc(f['Issue Type'] || 'Issue')}</strong><br>
-        📍 ${esc(f.Location || f.Postcode || '')}<br>
-        ${f.Description ? '<em>' + esc(f.Description.substring(0, 120)) + (f.Description.length > 120 ? '...' : '') + '</em><br>' : ''}
-        <span style="color:#7a7589;font-size:11px">${esc(f.Status || 'Open')} · ${esc(f.Language || '')}</span>
-      `)
+      const icon = L.divIcon({
+        className: 'custom-map-pin',
+        html: `<div class="pin-halo" style="background:${colour}; opacity:0.15;"></div>
+               <div class="pin-dot" style="background:${colour};"></div>`,
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+      })
+
+      L.marker([latlng[0] + jitter[0], latlng[1] + jitter[1]], { icon })
+        .addTo(map)
+        .bindPopup(`
+          <div class="map-popup">
+            <strong>${esc(f['Issue Type'] || 'Issue')}</strong><br>
+            ${esc(f.Location || f.Postcode || '')}<br>
+            ${f.Description ? '<em>' + esc(f.Description.substring(0, 120)) + (f.Description.length > 120 ? '...' : '') + '</em><br>' : ''}
+            <span class="popup-meta">${esc(f.Status || 'Open')} · ${esc(f.Language || '')}</span>
+          </div>
+        `)
       placed++
     }
 
@@ -93,6 +100,4 @@ export async function initMap() {
     console.error('Map load failed:', e)
     document.getElementById('report-count').textContent = 'Could not load reports'
   }
-
-  if (spinner) spinner.style.display = 'none'
 }

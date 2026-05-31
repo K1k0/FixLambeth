@@ -1,6 +1,22 @@
-import { getT, getLang, getIssueEn } from './i18n.js'
+import { getT, getLang, getIssueEn, ISSUE_ICONS, issueSVG } from './i18n.js'
 import { translateToEnglish, saveReport, uploadPhoto } from './api.js'
 import { validatePostcode } from './utils.js'
+
+function showValidationMessage(msg) {
+  let el = document.getElementById('validation-toast')
+  if (!el) {
+    el = document.createElement('div')
+    el.id = 'validation-toast'
+    el.setAttribute('role', 'alert')
+    el.setAttribute('aria-live', 'polite')
+    el.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--error,#d9534f);color:#fff;padding:12px 20px;border-radius:12px;font-family:var(--font-ui,system-ui);font-size:14px;font-weight:600;z-index:9999;max-width:90vw;text-align:center;'
+    document.body.appendChild(el)
+  }
+  el.textContent = msg
+  el.style.display = 'block'
+  clearTimeout(el._timeout)
+  el._timeout = setTimeout(() => el.style.display = 'none', 3000)
+}
 
 export let selectedKey = ''
 export let selectedEmail = ''
@@ -20,6 +36,12 @@ export function setProgress(step) {
   })
 }
 
+function setActiveCard(key) {
+  document.querySelectorAll('.issue-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.key === key)
+  })
+}
+
 export function toStep1() {
   document.querySelectorAll('.step').forEach(s => s.classList.remove('active'))
   document.getElementById('s1').classList.add('active')
@@ -35,13 +57,22 @@ export function toStep1() {
     preview.style.display = 'none'
     preview.src = ''
   }
+  const area = document.getElementById('photo-upload-area')
+  if (area) area.classList.remove('filled')
+  setActiveCard('flytipping')
 }
 
 export function toStep2(key, email) {
   selectedKey = key
   selectedEmail = email
+  setActiveCard(key)
   const t = getT()
-  document.getElementById('selected-chip').textContent = '● ' + (t.issueLabels[key] || key)
+  const label = t.issueLabels?.[key] || key
+  const iconKey = ISSUE_ICONS[key]
+  const chip = document.getElementById('selected-chip')
+  if (chip) {
+    chip.innerHTML = `<span class="chip-icon">${issueSVG(iconKey, 14)}</span><span>${label}</span>`
+  }
   document.querySelectorAll('.step').forEach(s => s.classList.remove('active'))
   document.getElementById('s2').classList.add('active')
   setProgress(2)
@@ -55,7 +86,7 @@ export async function toStep3() {
   const when = document.getElementById('inp-when').value.trim()
   const name = document.getElementById('inp-name').value.trim()
 
-  if (!loc || !desc) { alert(t.alertFill); return }
+  if (!loc || !desc) { showValidationMessage(t.alertFill); return }
   if (postcode && !validatePostcode(postcode)) {
     document.getElementById('postcode-error').style.display = 'block'
     document.getElementById('inp-postcode').focus()
@@ -76,18 +107,33 @@ export async function toStep3() {
   }
 
   const issueEn = getIssueEn(selectedKey)
-  currentSubject = `${issueEn} — ${loc}${postcode ? ', ' + postcode : ''}`
-  currentBody = `Issue: ${issueEn}
-Location: ${loc}${postcode ? '\nPostcode: ' + postcode : ''}
-Description: ${descEn}${when ? '\nWhen noticed: ' + when : ''}${name ? '\nReported by: ' + name : ''}
-${photoUrl ? '\nPhoto: ' + photoUrl : ''}
+  const issueLabel = t.issueLabels?.[selectedKey] || selectedKey
+  const team = issueEn.toLowerCase().includes('fly') || issueEn.toLowerCase().includes('graffiti') ? 'Environment'
+    : issueEn.toLowerCase().includes('tree') ? 'Parks'
+    : issueEn.toLowerCase().includes('noise') || issueEn.toLowerCase().includes('anti-social') ? 'Noise'
+    : 'Highways'
 
-Sent via fixlambeth.co.uk`
+  currentSubject = `${issueEn} report — ${loc || 'Lambeth'}`
+  currentBody = `Dear ${team} team,
+
+I would like to report a ${issueEn.toLowerCase()} issue in Lambeth.
+
+Location: ${loc || '—'}
+Postcode: ${postcode || '—'}
+When noticed: ${when || '—'}
+
+Details:
+${descEn || '—'}
+${photoUrl ? '\nA photo is attached to this email.' : ''}
+Please could the relevant team look into this.
+
+Kind regards,
+${name || 'A Lambeth resident'}`
 
   currentEmail = selectedEmail.replaceAll('%26', '&')
   currentMailto = `mailto:${currentEmail}?subject=${encodeURIComponent(currentSubject)}&body=${encodeURIComponent(currentBody)}`
 
-  document.getElementById('confirm-email').textContent = `→ ${currentEmail}`
+  document.getElementById('confirm-email').textContent = currentEmail
   document.getElementById('fallback-to').textContent = currentEmail
   document.getElementById('fallback-subject').textContent = currentSubject
   document.getElementById('fallback-body').textContent = currentBody
@@ -109,11 +155,12 @@ Sent via fixlambeth.co.uk`
   }
 
   document.getElementById('status-note').textContent = savedOk
-    ? t.statusNote
+    ? t.mapNote || t.statusNote
     : 'Could not save to the map — but your email will still reach the council.'
 
   btn.disabled = false
-  btn.innerHTML = `<span id="btn-next-text">${t.btnNext}</span> →`
+  btn.innerHTML = `<span id="btn-next-text">${t.btnPrepare || t.btnNext}</span>
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>`
 
   document.querySelectorAll('.step').forEach(s => s.classList.remove('active'))
   document.getElementById('s3').classList.add('active')
@@ -129,19 +176,24 @@ export function copyEmailBody() {
   const text = `To: ${currentEmail}\nSubject: ${currentSubject}\n\n${currentBody}`
   navigator.clipboard.writeText(text).then(() => {
     const ok = document.getElementById('copy-ok')
-    ok.style.display = 'inline'
-    setTimeout(() => ok.style.display = 'none', 2000)
+    if (ok) {
+      ok.style.display = 'inline'
+      setTimeout(() => ok.style.display = 'none', 1800)
+    }
   })
 }
 
 export async function handlePhoto(input) {
   if (input.files && input.files[0]) {
     photoFile = input.files[0]
+    const area = document.getElementById('photo-upload-area')
+    const preview = document.getElementById('photo-preview')
+
     const reader = new FileReader()
     reader.onload = e => {
-      const preview = document.getElementById('photo-preview')
       preview.src = e.target.result
       preview.style.display = 'block'
+      if (area) area.classList.add('filled')
     }
     reader.readAsDataURL(photoFile)
 
