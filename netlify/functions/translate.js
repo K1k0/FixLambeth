@@ -70,6 +70,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({ translated }),
     }
   } catch (err) {
-    return { statusCode: 500, headers: corsHeaders, body: JSON.stringify({ error: err.message }) }
+    console.error('Translate error:', err)
+    return { statusCode: 500, headers: corsHeaders, body: JSON.stringify({ error: 'Translation service unavailable' }) }
   }
 }

@@ -122,6 +122,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({ success: true, id: key }),
     }
   } catch (err) {
-    return { statusCode: 500, headers: corsHeaders, body: JSON.stringify({ error: err.message }) }
+    console.error('Save-report error:', err)
+    return { statusCode: 500, headers: corsHeaders, body: JSON.stringify({ error: 'Internal server error' }) }
   }
 }

@@ -43,6 +43,14 @@ function issueSVG(key, size = 14) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`
 }
 
+function getTeam(issueKey) {
+  const issueEn = (en.issues[issueKey] || issueKey).toLowerCase()
+  if (issueEn.includes('fly') || issueEn.includes('graffiti')) return 'Environment'
+  if (issueEn.includes('tree')) return 'Parks'
+  if (issueEn.includes('noise') || issueEn.includes('anti-social')) return 'Noise'
+  return 'Highways'
+}
+
 export function setLang(l, currentIssueKey) {
   lang = l
   const t = allTranslations[l]
@@ -86,7 +94,7 @@ export function setLang(l, currentIssueKey) {
   document.getElementById('s1-heading').textContent = t.s1Heading
   document.getElementById('s1-sub').textContent = t.s1Sub
   document.getElementById('s2-heading').textContent = t.s2Title || t.s2Heading
-  document.getElementById('s2-sub').textContent = t.s2Sub
+  document.getElementById('s2-sub').textContent = (t.s2Sub || '').replace('{team}', getTeam(currentIssueKey))
   document.getElementById('confirm-title').textContent = t.s3Title || t.confirmTitle
   document.getElementById('confirm-sub').textContent = t.s3Sub || t.confirmSub
 

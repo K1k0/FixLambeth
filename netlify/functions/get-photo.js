@@ -49,6 +49,7 @@ exports.handler = async (event) => {
       isBase64Encoded: true,
     }
   } catch (err) {
-    return { statusCode: 500, headers: corsHeaders, body: err.message }
+    console.error('Get-photo error:', err)
+    return { statusCode: 500, headers: corsHeaders, body: 'Internal server error' }
   }
 }

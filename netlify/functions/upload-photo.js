@@ -87,6 +87,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({ key }),
     }
   } catch (err) {
-    return { statusCode: 500, headers: corsHeaders, body: JSON.stringify({ error: err.message }) }
+    console.error('Upload-photo error:', err)
+    return { statusCode: 500, headers: corsHeaders, body: JSON.stringify({ error: 'Upload service unavailable' }) }
   }
 }

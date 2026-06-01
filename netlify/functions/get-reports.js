@@ -48,6 +48,7 @@ exports.handler = async (event) => {
       body: JSON.stringify(records),
     }
   } catch (err) {
-    return { statusCode: 500, headers: corsHeaders, body: JSON.stringify({ error: err.message }) }
+    console.error('Get-reports error:', err)
+    return { statusCode: 500, headers: corsHeaders, body: JSON.stringify({ error: 'Internal server error' }) }
   }
 }
