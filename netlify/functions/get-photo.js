@@ -2,6 +2,9 @@ const { getStore } = require('@netlify/blobs')
 
 const ALLOWED_ORIGINS = ['https://fixlambeth.co.uk', 'https://www.fixlambeth.co.uk', 'https://fixlambeth.netlify.app']
 
+// Matches keys minted by upload-photo.js: photo_<ms>_<6 chars>.<ext>
+const KEY_PATTERN = /^photo_\d{10,16}_[a-z0-9]{1,8}\.[a-z0-9]{2,5}$/
+
 function getBlobStore(name) {
   return getStore({
     name,
@@ -26,8 +29,8 @@ exports.handler = async (event) => {
 
   try {
     const key = event.queryStringParameters?.key
-    if (!key) {
-      return { statusCode: 400, headers: corsHeaders, body: 'Missing key parameter' }
+    if (!key || !KEY_PATTERN.test(key)) {
+      return { statusCode: 400, headers: corsHeaders, body: 'Missing or invalid key parameter' }
     }
 
     const store = getBlobStore('photos')

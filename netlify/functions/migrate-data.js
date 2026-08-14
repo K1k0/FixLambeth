@@ -1,4 +1,5 @@
 const { getStore } = require('@netlify/blobs')
+const crypto = require('crypto')
 
 const ALLOWED_ORIGINS = ['https://fixlambeth.co.uk', 'https://www.fixlambeth.co.uk', 'https://fixlambeth.netlify.app']
 
@@ -54,6 +55,14 @@ exports.handler = async (event) => {
     return { statusCode: 405, body: 'Method not allowed' }
   }
 
+  // One-off admin endpoint: it writes to the live report store, so it must not
+  // be publicly callable. Requires MIGRATE_SECRET to be set and matched.
+  const secret = process.env.MIGRATE_SECRET
+  const supplied = event.headers['x-migrate-secret'] || ''
+  if (!secret || supplied.length !== secret.length || !crypto.timingSafeEqual(Buffer.from(supplied), Buffer.from(secret))) {
+    return { statusCode: 404, headers: corsHeaders, body: 'Not found' }
+  }
+
   try {
     const store = getBlobStore('reports')
     let totalMigrated = 0
@@ -87,10 +96,11 @@ exports.handler = async (event) => {
       body: JSON.stringify({ success: true, migrated: totalMigrated }),
     }
   } catch (err) {
+    console.error('Migrate-data error:', err)
     return {
       statusCode: 500,
       headers: corsHeaders,
-      body: JSON.stringify({ error: err.message }),
+      body: JSON.stringify({ error: 'Migration failed' }),
     }
   }
 }

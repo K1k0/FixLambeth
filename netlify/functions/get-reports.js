@@ -2,6 +2,9 @@ const { getStore } = require('@netlify/blobs')
 
 const ALLOWED_ORIGINS = ['https://fixlambeth.co.uk', 'https://www.fixlambeth.co.uk', 'https://fixlambeth.netlify.app']
 
+const FETCH_CONCURRENCY = 20
+const MAX_RECORDS = 500
+
 function getBlobStore(name) {
   return getStore({
     name,
@@ -25,14 +28,21 @@ exports.handler = async (event) => {
     const { blobs } = await store.list()
     const records = []
 
-    for (const entry of blobs || []) {
-      try {
-        const blob = await store.get(entry.key)
-        if (blob) {
-          records.push(JSON.parse(blob))
+    // Fetch in bounded-concurrency batches rather than one at a time.
+    const entries = blobs || []
+    for (let i = 0; i < entries.length; i += FETCH_CONCURRENCY) {
+      const batch = entries.slice(i, i + FETCH_CONCURRENCY)
+      const results = await Promise.all(batch.map(async (entry) => {
+        try {
+          const blob = await store.get(entry.key)
+          return blob ? JSON.parse(blob) : null
+        } catch (e) {
+          console.error('Failed to read blob:', entry.key, e)
+          return null
         }
-      } catch (e) {
-        console.error('Failed to read blob:', entry.key, e)
+      }))
+      for (const r of results) {
+        if (r) records.push(r)
       }
     }
 
@@ -44,8 +54,8 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      headers: corsHeaders,
-      body: JSON.stringify(records),
+      headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' },
+      body: JSON.stringify(records.slice(0, MAX_RECORDS)),
     }
   } catch (err) {
     console.error('Get-reports error:', err)

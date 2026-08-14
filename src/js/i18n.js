@@ -5,6 +5,8 @@ import ar from '../i18n/ar.json'
 import pl from '../i18n/pl.json'
 
 const allTranslations = { en, pt, es, ar, pl }
+const SUPPORTED = Object.keys(allTranslations)
+const LANG_STORAGE_KEY = 'fixlambeth.lang'
 let lang = 'en'
 
 const ISSUE_ICONS = {
@@ -43,16 +45,47 @@ function issueSVG(key, size = 14) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`
 }
 
-function getTeam(issueKey) {
-  const issueEn = (en.issues[issueKey] || issueKey).toLowerCase()
-  if (issueEn.includes('fly') || issueEn.includes('graffiti')) return 'Environment'
-  if (issueEn.includes('tree')) return 'Parks'
-  if (issueEn.includes('noise') || issueEn.includes('anti-social')) return 'Noise'
-  return 'Highways'
+// Single source of truth for issue → council team routing.
+// Keyed explicitly rather than by substring: "streetlight" contains "tree",
+// which previously misrouted it to Parks.
+const ISSUE_TEAMS = {
+  flytipping: 'Environment',
+  graffiti: 'Environment',
+  tree: 'Parks',
+  noise: 'Noise',
+  asb: 'Noise',
+  pothole: 'Highways',
+  streetlight: 'Highways',
+  drain: 'Highways',
+}
+
+export function getTeam(issueKey) {
+  return ISSUE_TEAMS[issueKey] || 'Highways'
+}
+
+// Preferred language: saved choice → browser language → English.
+export function detectLang() {
+  try {
+    const saved = localStorage.getItem(LANG_STORAGE_KEY)
+    if (saved && SUPPORTED.includes(saved)) return saved
+  } catch (e) { /* storage blocked — fall through */ }
+  for (const tag of navigator.languages || [navigator.language || '']) {
+    const base = String(tag).toLowerCase().split('-')[0]
+    if (SUPPORTED.includes(base)) return base
+  }
+  return 'en'
+}
+
+function persistLang(l) {
+  try {
+    localStorage.setItem(LANG_STORAGE_KEY, l)
+  } catch (e) { /* storage blocked — language just won't persist */ }
 }
 
 export function setLang(l, currentIssueKey) {
+  if (!SUPPORTED.includes(l)) l = 'en'
   lang = l
+  persistLang(l)
   const t = allTranslations[l]
   document.documentElement.lang = l
   document.documentElement.dir = t.dir
@@ -132,10 +165,28 @@ export function setLang(l, currentIssueKey) {
 
   // Map
   document.getElementById('map-title').textContent = t.mapTitle
-  const mapEyebrow = document.querySelector('.map-eyebrow')
-  if (mapEyebrow) mapEyebrow.textContent = t.communityEyebrow || 'COMMUNITY'
-  const recentLabel = document.querySelector('.recent-label')
-  if (recentLabel) recentLabel.textContent = t.recentReports || 'RECENT REPORTS'
+  const mapEyebrow = document.getElementById('map-eyebrow')
+  if (mapEyebrow) mapEyebrow.textContent = t.communityEyebrow || 'Community'
+
+  // Map legend
+  const legendIds = { 'legend-env': 'legendEnv', 'legend-road': 'legendRoad', 'legend-parks': 'legendParks', 'legend-asb': 'legendAsb' }
+  for (const [id, key] of Object.entries(legendIds)) {
+    const el = document.getElementById(id)
+    if (el && t[key]) el.textContent = t[key]
+  }
+
+  // Map empty state
+  const emptyStrings = { 'map-empty-title': 'mapEmptyTitle', 'map-empty-body': 'mapEmptyBody', 'map-empty-cta-text': 'mapEmptyCta' }
+  for (const [id, key] of Object.entries(emptyStrings)) {
+    const el = document.getElementById(id)
+    if (el && t[key]) el.textContent = t[key]
+  }
+
+  // Report count (re-rendered in the active language)
+  const countEl = document.getElementById('report-count')
+  if (countEl && countEl.dataset.count !== undefined) {
+    countEl.textContent = formatReportCount(Number(countEl.dataset.count))
+  }
 
   // Issue cards
   document.querySelectorAll('[data-t]').forEach(el => {
@@ -179,6 +230,13 @@ function updateChip(key, t) {
   const label = t.issueLabels?.[key] || key
   const iconKey = ISSUE_ICONS[key]
   chip.innerHTML = `<span class="chip-icon">${issueSVG(iconKey, 14)}</span><span>${label}</span>`
+}
+
+export function formatReportCount(count) {
+  const t = getT()
+  if (!count) return t.mapCountNone || 'No reports yet'
+  if (count === 1) return t.mapCountOne || '1 report'
+  return (t.mapCountMany || '{count} reports').replace('{count}', String(count))
 }
 
 export function getIssueEn(key) {

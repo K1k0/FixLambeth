@@ -1,5 +1,6 @@
 import { fetchReports } from './api.js'
 import { esc } from './utils.js'
+import { getT, formatReportCount } from './i18n.js'
 
 const ISSUE_COLOURS = {
   flytipping: '#c2683f',
@@ -14,6 +15,35 @@ const ISSUE_COLOURS = {
 
 let map = null
 
+// Deterministic per-report offset (~±100m) so a pin doesn't wander between
+// page loads, while still not pinpointing an exact address.
+function stableJitter(seed) {
+  let h = 2166136261
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  const a = ((h >>> 0) % 10000) / 10000
+  const b = ((Math.imul(h, 48271) >>> 0) % 10000) / 10000
+  return [(a - 0.5) * 0.002, (b - 0.5) * 0.002]
+}
+
+function setReportCount(text) {
+  const el = document.getElementById('report-count')
+  if (el) el.textContent = text
+}
+
+// With no reports the legend describes nothing, so swap it for a real empty
+// state that offers the one useful action.
+export function setMapEmptyState(isEmpty) {
+  const empty = document.getElementById('map-empty')
+  const legend = document.getElementById('map-legend')
+  const count = document.getElementById('report-count')
+  if (empty) empty.hidden = !isEmpty
+  if (legend) legend.hidden = isEmpty
+  if (count) count.hidden = isEmpty
+}
+
 function getColour(issue) {
   const key = Object.keys(ISSUE_COLOURS).find(k => issue && issue.toLowerCase().includes(k))
   return key ? ISSUE_COLOURS[key] : '#3f4d7a'
@@ -23,7 +53,7 @@ async function geocodePostcode(postcode) {
   if (!postcode) return null
   try {
     const clean = postcode.trim().replace(/\s+/g, '')
-    const res = await fetch(`https://api.postcodes.io/postcodes/${clean}`)
+    const res = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(clean)}`)
     const data = await res.json()
     if (data.status === 200 && data.result) {
       return [data.result.latitude, data.result.longitude]
@@ -81,7 +111,7 @@ export async function initMap() {
 
       if (!latlng) continue
 
-      const jitter = [(Math.random() - 0.5) * 0.002, (Math.random() - 0.5) * 0.002]
+      const jitter = stableJitter(String(r.id || f.Postcode || placed))
       const colour = getColour(f['Issue Type'] || '')
 
       const icon = L.divIcon({
@@ -105,11 +135,13 @@ export async function initMap() {
       placed++
     }
 
-    document.getElementById('report-count').textContent = placed === 0
-      ? 'No reports yet — be the first!'
-      : `${placed} report${placed !== 1 ? 's' : ''}`
+    const countEl = document.getElementById('report-count')
+    if (countEl) countEl.dataset.count = String(placed)
+    setReportCount(formatReportCount(placed))
+    setMapEmptyState(placed === 0)
   } catch (e) {
     console.error('Map load failed:', e)
-    document.getElementById('report-count').textContent = 'Could not load reports'
+    setMapEmptyState(false)
+    setReportCount(getT().mapCountError || 'Could not load reports')
   }
 }
