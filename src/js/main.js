@@ -1,4 +1,4 @@
-import { setLang, getT } from './i18n.js'
+import { setLang, getT, detectLang } from './i18n.js'
 import {
   selectedKey,
   toStep2,
@@ -30,31 +30,45 @@ function updateStepLabel() {
 
 function setActiveCard(key) {
   document.querySelectorAll('.issue-card').forEach(c => {
-    c.classList.toggle('selected', c.dataset.key === key)
+    const on = c.dataset.key === key
+    c.classList.toggle('selected', on)
+    c.setAttribute('aria-checked', on ? 'true' : 'false')
+    c.tabIndex = on ? 0 : -1
   })
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Saved choice → browser language → English
+  setLang(detectLang(), 'flytipping')
   const t = getT()
 
   // Language switching
   const langSwitcher = document.querySelector('.lang-switcher')
   const langPill = document.querySelector('.lang-pill')
   if (langPill && langSwitcher) {
+    const setOpen = (open) => {
+      langSwitcher.classList.toggle('open', open)
+      langPill.setAttribute('aria-expanded', open ? 'true' : 'false')
+    }
     langPill.addEventListener('click', (e) => {
       e.stopPropagation()
-      langSwitcher.classList.toggle('open')
+      setOpen(!langSwitcher.classList.contains('open'))
     })
-    document.addEventListener('click', () => {
-      langSwitcher.classList.remove('open')
+    document.addEventListener('click', () => setOpen(false))
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && langSwitcher.classList.contains('open')) {
+        setOpen(false)
+        langPill.focus()
+      }
     })
   }
 
   document.querySelectorAll('.lang-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const l = btn.getAttribute('data-lang')
-      setLang(l, selectedKey)
+      setLang(l, selectedKey || document.querySelector('.issue-card.selected')?.dataset.key)
       if (langSwitcher) langSwitcher.classList.remove('open')
+      if (langPill) langPill.setAttribute('aria-expanded', 'false')
     })
   })
 
@@ -89,6 +103,9 @@ document.addEventListener('DOMContentLoaded', () => {
     resetScroll()
   })
 
+  // Map empty state → back to the report flow
+  document.getElementById('map-empty-cta').addEventListener('click', () => tabReport.click())
+
   // Issue card selection
   document.querySelectorAll('.issue-card').forEach(card => {
     card.addEventListener('click', () => {
@@ -96,6 +113,21 @@ document.addEventListener('DOMContentLoaded', () => {
       toStep2(card.dataset.key, card.dataset.email)
       updateStepLabel()
       resetScroll()
+    })
+  })
+
+  // Arrow-key navigation within the issue radiogroup (selects without advancing)
+  const issueCards = Array.from(document.querySelectorAll('.issue-card'))
+  issueCards.forEach((card, i) => {
+    card.addEventListener('keydown', (e) => {
+      const delta = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key]
+      if (!delta) return
+      e.preventDefault()
+      const rtl = document.documentElement.dir === 'rtl'
+      const step = (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && rtl ? -delta : delta
+      const next = issueCards[(i + step + issueCards.length) % issueCards.length]
+      setActiveCard(next.dataset.key)
+      next.focus()
     })
   })
 
@@ -164,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     month: 'long',
   })
 
-  // Initial step label
+  // Initial step label + roving tabindex on the issue group
+  setActiveCard(document.querySelector('.issue-card.selected')?.dataset.key || 'flytipping')
   updateStepLabel()
 })
