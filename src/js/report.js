@@ -1,4 +1,4 @@
-import { getT, getLang, getIssueEn, ISSUE_ICONS, issueSVG } from './i18n.js'
+import { getT, getLang, getIssueEn, getTeam, ISSUE_ICONS, issueSVG } from './i18n.js'
 import { translateToEnglish, saveReport, uploadPhoto } from './api.js'
 import { validatePostcode } from './utils.js'
 
@@ -22,6 +22,9 @@ export let selectedKey = ''
 export let selectedEmail = ''
 export let photoFile = null
 export let photoUrl = ''
+// Resolves once any in-flight photo upload has settled, so the email body
+// never claims a photo that hasn't finished uploading.
+let photoUploadPromise = Promise.resolve()
 let currentEmail = ''
 let currentSubject = ''
 let currentBody = ''
@@ -34,12 +37,35 @@ export function setProgress(step) {
     if (i + 1 < step) el.classList.add('done')
     if (i + 1 === step) el.classList.add('active')
   })
+  // The hero introduces the whole flow, so it only belongs on step 1 —
+  // otherwise it contradicts the screen while the user is mid-form.
+  const hero = document.querySelector('.hero-inline')
+  if (hero) hero.hidden = step !== 1
+
+  // Keep the label with the bar — otherwise step 3 still reads "Step 2 of 3".
+  const stepLabel = document.querySelector('.step-label')
+  if (stepLabel) {
+    const t = getT()
+    stepLabel.textContent = (t.stepLabel || 'Step {n} of 3').replace('{n}', step)
+  }
 }
 
 function setActiveCard(key) {
   document.querySelectorAll('.issue-card').forEach(c => {
-    c.classList.toggle('selected', c.dataset.key === key)
+    const on = c.dataset.key === key
+    c.classList.toggle('selected', on)
+    c.setAttribute('aria-checked', on ? 'true' : 'false')
+    c.tabIndex = on ? 0 : -1
   })
+}
+
+// Announce the new step and move focus to its heading, so the change isn't
+// silent for screen-reader and keyboard users.
+function announceStep(headingId) {
+  const heading = document.getElementById(headingId)
+  const announcer = document.getElementById('step-announcer')
+  if (announcer && heading) announcer.textContent = heading.textContent
+  if (heading) heading.focus()
 }
 
 export function toStep1() {
@@ -52,6 +78,9 @@ export function toStep1() {
   })
   photoFile = null
   photoUrl = ''
+  photoUploadPromise = Promise.resolve()
+  const photoInput = document.getElementById('photo-input')
+  if (photoInput) photoInput.value = ''
   const preview = document.getElementById('photo-preview')
   if (preview) {
     preview.style.display = 'none'
@@ -60,6 +89,7 @@ export function toStep1() {
   const area = document.getElementById('photo-upload-area')
   if (area) area.classList.remove('filled')
   setActiveCard('flytipping')
+  announceStep('s1-heading')
 }
 
 export function toStep2(key, email) {
@@ -73,9 +103,14 @@ export function toStep2(key, email) {
   if (chip) {
     chip.innerHTML = `<span class="chip-icon">${issueSVG(iconKey, 14)}</span><span>${label}</span>`
   }
+  // The subtitle names the receiving team, so it must follow the selection —
+  // not just the last language change.
+  const sub = document.getElementById('s2-sub')
+  if (sub) sub.textContent = (t.s2Sub || '').replace('{team}', getTeam(key))
   document.querySelectorAll('.step').forEach(s => s.classList.remove('active'))
   document.getElementById('s2').classList.add('active')
   setProgress(2)
+  announceStep('s2-heading')
 }
 
 export async function toStep3() {
@@ -106,12 +141,11 @@ export async function toStep3() {
     }
   }
 
+  // Wait for any in-flight photo upload so the body reflects reality.
+  await photoUploadPromise
+
   const issueEn = getIssueEn(selectedKey)
-  const issueLabel = t.issueLabels?.[selectedKey] || selectedKey
-  const team = issueEn.toLowerCase().includes('fly') || issueEn.toLowerCase().includes('graffiti') ? 'Environment'
-    : issueEn.toLowerCase().includes('tree') ? 'Parks'
-    : issueEn.toLowerCase().includes('noise') || issueEn.toLowerCase().includes('anti-social') ? 'Noise'
-    : 'Highways'
+  const team = getTeam(selectedKey)
 
   currentSubject = `${issueEn} report — ${loc || 'Lambeth'}`
   currentBody = `Dear ${team} team,
@@ -124,13 +158,13 @@ When noticed: ${when || '—'}
 
 Details:
 ${descEn || '—'}
-${photoUrl ? '\nA photo is attached to this email.' : ''}
+${photoUrl ? `\nPhoto: ${photoUrl}\n` : ''}
 Please could the relevant team look into this.
 
 Kind regards,
 ${name || 'A Lambeth resident'}`
 
-  currentEmail = selectedEmail.replaceAll('%26', '&')
+  currentEmail = decodeURIComponent(selectedEmail)
   currentMailto = `mailto:${currentEmail}?subject=${encodeURIComponent(currentSubject)}&body=${encodeURIComponent(currentBody)}`
 
   document.getElementById('confirm-email').textContent = currentEmail
@@ -160,11 +194,12 @@ ${name || 'A Lambeth resident'}`
 
   btn.disabled = false
   btn.innerHTML = `<span id="btn-next-text">${t.btnPrepare || t.btnNext}</span>
-    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>`
+    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>`
 
   document.querySelectorAll('.step').forEach(s => s.classList.remove('active'))
   document.getElementById('s3').classList.add('active')
   setProgress(3)
+  announceStep('confirm-title')
 }
 
 export function sendEmail() {
@@ -183,31 +218,48 @@ export function copyEmailBody() {
   })
 }
 
-export async function handlePhoto(input) {
-  if (input.files && input.files[0]) {
-    photoFile = input.files[0]
-    const area = document.getElementById('photo-upload-area')
-    const preview = document.getElementById('photo-preview')
-
+function readAsDataURL(file) {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = e => {
-      preview.src = e.target.result
-      preview.style.display = 'block'
-      if (area) area.classList.add('filled')
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = () => reject(reader.error || new Error('Could not read file'))
+    reader.readAsDataURL(file)
+  })
+}
+
+export async function handlePhoto(input) {
+  if (!input.files || !input.files[0]) return
+  photoFile = input.files[0]
+  photoUrl = ''
+  const area = document.getElementById('photo-upload-area')
+  const preview = document.getElementById('photo-preview')
+
+  photoUploadPromise = (async () => {
+    let dataUrl
+    try {
+      dataUrl = await readAsDataURL(photoFile)
+    } catch (e) {
+      console.error('Could not read photo:', e)
+      showValidationMessage(getT().photoReadError || 'Could not read that photo.')
+      return
     }
-    reader.readAsDataURL(photoFile)
+
+    if (preview) {
+      preview.src = dataUrl
+      preview.style.display = 'block'
+    }
+    if (area) area.classList.add('filled')
 
     try {
-      const reader2 = new FileReader()
-      reader2.onload = async () => {
-        const data = await uploadPhoto(reader2.result)
-        if (data.key) {
-          photoUrl = `${window.location.origin}/.netlify/functions/get-photo?key=${data.key}`
-        }
+      const data = await uploadPhoto(dataUrl)
+      if (data.key) {
+        photoUrl = `${window.location.origin}/.netlify/functions/get-photo?key=${encodeURIComponent(data.key)}`
       }
-      reader2.readAsDataURL(photoFile)
     } catch (e) {
+      // Non-fatal: the report still sends, just without a photo link.
       console.error('Photo upload failed:', e)
     }
-  }
+  })()
+
+  await photoUploadPromise
 }

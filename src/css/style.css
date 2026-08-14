@@ -22,8 +22,12 @@
   --hairline: 1px;
   --stroke: 1.5px;
   --pad-screen: 24px;
-  --gap-grid: 11px;
+  --gap-grid: 12px;
   --gap-field: 16px;
+  /* Two-layer shadows: a tight ambient layer plus a soft cast one. */
+  --shadow-sm: 0 1px 2px rgba(21, 25, 31, 0.06), 0 1px 3px rgba(21, 25, 31, 0.08);
+  --shadow-md: 0 2px 4px rgba(21, 25, 31, 0.05), 0 8px 16px rgba(21, 25, 31, 0.08);
+  --shadow-lg: 0 4px 8px rgba(21, 25, 31, 0.05), 0 16px 32px rgba(21, 25, 31, 0.10);
 }
 
 @supports not (background: color-mix(in srgb, red 8%, white)) {
@@ -50,6 +54,37 @@ html { scroll-behavior: smooth; }
 }
 .skip-link:focus {
   top: 8px;
+}
+
+/* One visible focus ring for everything interactive, replacing the UA default.
+   Inputs are excluded — they have their own tinted ring further down. */
+:where(button, a, [tabindex]):focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+
+/* Step headings are focused programmatically to move screen-reader position on
+   step change. That's not a user-visible focus, so it must not draw a ring —
+   #step-announcer does the announcing. */
+.step-heading:focus,
+.step-heading:focus-visible,
+.confirm-title:focus,
+.confirm-title:focus-visible {
+  outline: none;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 body {
@@ -235,11 +270,14 @@ body {
 
 /* ── Progress bar ── */
 
+/* Three segments side by side. `.progress-row` is the column wrapper that
+   stacks the step label above this bar. */
 .progress-bar {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 24px;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
 }
 
 .progress-label {
@@ -301,11 +339,12 @@ body {
 
 .issue-card {
   background: var(--surface);
-  border: var(--stroke) solid var(--border);
+  border: none;
+  box-shadow: var(--shadow-sm);
   border-radius: var(--radius);
-  padding: 15px 14px 16px;
+  padding: 16px;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: box-shadow 0.15s, background 0.15s, transform 0.15s;
   text-align: left;
   display: flex;
   flex-direction: column;
@@ -316,8 +355,11 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Hover lifts; selected gets an accent ring. Previously both just recoloured
+   the border, so the two states were near-indistinguishable. */
 .issue-card:hover {
-  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .issue-card:active {
@@ -362,7 +404,7 @@ body {
 /* Selected state */
 .issue-card.selected {
   background: var(--accent-tint);
-  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent), var(--shadow-md);
 }
 
 .issue-card.selected .issue-icon-tile {
@@ -927,11 +969,47 @@ body {
 }
 
 .map-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 48px 24px;
+  margin-top: 16px;
   text-align: center;
-  padding: 48px 16px;
-  color: var(--faint);
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  color: var(--muted);
   font-family: var(--font-ui);
+}
+
+.map-empty[hidden] {
+  display: none;
+}
+
+.map-empty > svg {
+  color: var(--faint);
+}
+
+.map-empty h2 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+.map-empty p {
   font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+  max-width: 34ch;
+}
+
+.map-empty .btn-primary {
+  width: auto;
+  padding: 12px 24px;
+  margin-top: 4px;
 }
 
 /* ── Recent reports list ── */
@@ -1218,7 +1296,12 @@ body {
   margin-bottom: 20px;
 }
 
-.hero-inline .hero-eyebrow {
+.hero-inline[hidden] {
+  display: none;
+}
+
+/* Unscoped: the map tab has an eyebrow outside .hero-inline too. */
+.hero-eyebrow {
   display: block;
   font-family: var(--font-ui);
   font-size: 11.5px;
@@ -1437,10 +1520,25 @@ body {
 [dir="rtl"] .map-legend { direction: rtl; }
 [dir="rtl"] #fallback-box { text-align: right; }
 
+/* Very narrow phones: lay the card out horizontally rather than dropping to a
+   single tall column. */
+@media (max-width: 380px) {
+  .issue-card {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+  .issue-card .issue-label,
+  .issue-card .issue-team {
+    text-align: start;
+  }
+}
+
 /* ── Responsive ── */
 
 @media (max-width: 480px) {
-  .issue-grid { grid-template-columns: 1fr; }
+  /* Two columns hold down to 320px — the labels are short, and one column
+     turned eight options into ~1000px of scrolling. */
   #map { height: 320px; }
   .step-heading { font-size: 24px; }
   .map-title { font-size: 27px; }

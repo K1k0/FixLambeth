@@ -78,7 +78,13 @@ exports.handler = async (event) => {
     return { statusCode: 405, body: 'Method not allowed' }
   }
 
-  const rateLimit = await checkRateLimit(event.headers['client-ip'] || event.headers['x-forwarded-for'] || 'unknown')
+  let rateLimit = { allowed: true }
+  try {
+    rateLimit = await checkRateLimit(event.headers['client-ip'] || event.headers['x-forwarded-for'] || 'unknown')
+  } catch (e) {
+    // A rate-limit store outage must not stop residents reporting issues.
+    console.error('Rate limit check failed, allowing request:', e)
+  }
   if (!rateLimit.allowed) {
     return {
       statusCode: 429,
