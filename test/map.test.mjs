@@ -23,6 +23,33 @@ test('with reports present the legend returns and the empty state hides', async 
   assert.equal(document.getElementById('report-count').hidden, false)
 })
 
+test('a failed load reports an error, not a friendly empty map', async () => {
+  // Regression: a 500 from get-reports was caught into an empty array, so a
+  // broken backend rendered as "No reports yet — be the first".
+  const fetchImpl = async (url) => {
+    if (String(url).includes('get-reports')) {
+      return { ok: false, status: 500, json: async () => ({ error: 'Internal server error' }) }
+    }
+    return { ok: true, status: 200, json: async () => [] }
+  }
+  const { window, document, app } = await boot({ entry: ENTRY, fetchImpl })
+
+  // Minimal Leaflet stub so initMap gets as far as the fetch.
+  window.L = {
+    map: () => ({ setView: () => ({}), invalidateSize: () => {} }),
+    tileLayer: () => ({ addTo: () => {} }),
+    divIcon: () => ({}),
+    marker: () => ({ addTo: () => ({ bindPopup: () => {} }) }),
+  }
+  const mapEl = document.getElementById('map')
+  Object.defineProperties(mapEl, { offsetWidth: { value: 600 }, offsetHeight: { value: 400 } })
+
+  await app.initMap()
+
+  assert.match(document.getElementById('report-count').textContent, /could not load/i)
+  assert.equal(document.getElementById('map-empty').hidden, true, 'must not claim the map is simply empty')
+})
+
 test('the empty state is translated along with everything else', async () => {
   const { document, app } = await boot({ entry: ENTRY })
   app.setLang('pl', 'flytipping')

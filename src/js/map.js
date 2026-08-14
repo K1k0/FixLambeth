@@ -91,9 +91,13 @@ export async function initMap() {
     }).addTo(map)
 
     let records = []
+    let loadFailed = false
     try {
       records = await fetchReports()
     } catch (e) {
+      // Distinguish "nothing to show" from "couldn't ask" — reporting a failed
+      // load as an empty map hides a broken backend behind a friendly message.
+      loadFailed = true
       console.warn('Could not fetch reports:', e)
     }
 
@@ -133,6 +137,12 @@ export async function initMap() {
           </div>
         `)
       placed++
+    }
+
+    if (loadFailed) {
+      setMapEmptyState(false)
+      setReportCount(getT().mapCountError || 'Could not load reports')
+      return
     }
 
     const countEl = document.getElementById('report-count')
